@@ -14,6 +14,7 @@ import {
   FlatList,
   Modal,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../components/ui/Card';
@@ -38,12 +39,24 @@ export default function VentasScreen() {
     cargarDatos();
   }, []);
 
+  // Recargar datos cuando la pantalla se enfoca
+  useFocusEffect(
+    React.useCallback(() => {
+      cargarDatos();
+    }, [])
+  );
+
   const cargarDatos = async () => {
     try {
       const [productosData, monedasData] = await Promise.all([
         databaseService.getProductos(),
         databaseService.getMonedas(),
       ]);
+      
+      // Debug: Ver qué productos se están cargando
+      console.log('Productos cargados:', productosData.length);
+      console.log('Productos con stock:', productosData.filter(p => p.stock > 0).length);
+      
       setProductos(productosData.filter(p => p.stock > 0));
       setMonedas(monedasData);
       
@@ -167,8 +180,28 @@ export default function VentasScreen() {
           <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled">
             {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.title}>🧾 Registrar Venta</Text>
-              <Text style={styles.fecha}>{getFechaActual()}</Text>
+              <View style={styles.headerTop}>
+                <View>
+                  <Text style={styles.title}>🧾 Registrar Venta</Text>
+                  <Text style={styles.fecha}>{getFechaActual()}</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.debugButton}
+                  onPress={async () => {
+                    try {
+                      const allProducts = await databaseService.getProductos();
+                      Alert.alert(
+                        'Debug Productos',
+                        `Total productos: ${allProducts.length}\nCon stock > 0: ${allProducts.filter(p => p.stock > 0).length}\nProductos disponibles: ${productos.length}`
+                      );
+                    } catch (error) {
+                      Alert.alert('Error', 'No se pudieron cargar los productos');
+                    }
+                  }}
+                >
+                  <Ionicons name="bug" size={20} color={Colors.dark.secondary} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <View style={styles.content}>
@@ -360,6 +393,16 @@ export default function VentasScreen() {
                     3. Elige el método de pago{'\n'}
                     4. Confirma la venta
                   </Text>
+                  
+                  {productos.length === 0 && (
+                    <TouchableOpacity
+                      style={styles.reloadButton}
+                      onPress={cargarDatos}
+                    >
+                      <Ionicons name="refresh" size={20} color={Colors.dark.primary} />
+                      <Text style={styles.reloadText}>Recargar Productos</Text>
+                    </TouchableOpacity>
+                  )}
                 </Card>
               )}
             </View>
@@ -400,8 +443,16 @@ export default function VentasScreen() {
             contentContainerStyle={styles.modalLista}
             ListEmptyComponent={() => (
               <View style={styles.emptyState}>
-                <Ionicons name="search-outline" size={48} color={Colors.dark.border} />
-                <Text style={styles.emptyText}>No se encontraron productos</Text>
+                <Ionicons name="cube-outline" size={48} color={Colors.dark.border} />
+                <Text style={styles.emptyText}>
+                  {busqueda ? 'No se encontraron productos' : 'No hay productos disponibles'}
+                </Text>
+                {!busqueda && (
+                  <Text style={styles.emptySubtext}>
+                    Los productos sin stock no aparecen aquí.{'\n'}
+                    Ve a Admin → Productos para agregar stock.
+                  </Text>
+                )}
               </View>
             )}
           />
@@ -428,10 +479,20 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.dark.border,
   },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
   title: {
     ...Typography.h2,
     color: Colors.dark.text,
     marginBottom: Spacing.xs,
+  },
+  debugButton: {
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.dark.surfaceVariant,
   },
   fecha: {
     ...Typography.caption,
@@ -612,6 +673,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
   },
+  reloadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: Spacing.lg,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    backgroundColor: Colors.dark.surfaceVariant,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.sm,
+  },
+  reloadText: {
+    ...Typography.body,
+    color: Colors.dark.primary,
+    fontWeight: '600',
+  },
   modalContainer: {
     flex: 1,
     backgroundColor: Colors.dark.background,
@@ -687,5 +764,13 @@ const styles = StyleSheet.create({
     ...Typography.body,
     color: Colors.dark.secondary,
     marginTop: Spacing.md,
+    textAlign: 'center',
+  },
+  emptySubtext: {
+    ...Typography.caption,
+    color: Colors.dark.secondary,
+    marginTop: Spacing.sm,
+    textAlign: 'center',
+    opacity: 0.7,
   },
 });

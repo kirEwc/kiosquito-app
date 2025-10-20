@@ -252,20 +252,24 @@ export default function AdminScreen() {
             style={styles.logoutButton}
             onPress={() => {
               Alert.alert(
-                'Cerrar Sesión',
-                '¿Estás seguro de que quieres cerrar sesión?',
+                "Cerrar Sesión",
+                "¿Estás seguro de que quieres cerrar sesión?",
                 [
-                  { text: 'Cancelar', style: 'cancel' },
-                  { 
-                    text: 'Cerrar Sesión', 
-                    style: 'destructive',
-                    onPress: logout 
-                  }
+                  { text: "Cancelar", style: "cancel" },
+                  {
+                    text: "Cerrar Sesión",
+                    style: "destructive",
+                    onPress: logout,
+                  },
                 ]
               );
             }}
           >
-            <Ionicons name="log-out-outline" size={24} color={Colors.dark.error} />
+            <Ionicons
+              name="log-out-outline"
+              size={24}
+              color={Colors.dark.error}
+            />
           </TouchableOpacity>
         </View>
 
@@ -335,8 +339,6 @@ export default function AdminScreen() {
             <Ionicons name="refresh" size={20} color={Colors.dark.primary} />
             <Text style={styles.refreshText}>Actualizar</Text>
           </TouchableOpacity>
-
-
         </View>
       </View>
 
@@ -529,9 +531,9 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.dark.border,
   },
   headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: Spacing.lg,
   },
   title: {
