@@ -3,17 +3,21 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   Alert,
   Modal,
   FlatList,
   TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
+  TextInput,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
 import { databaseService, Moneda } from '../../services/database';
 import { Colors, Spacing, Typography, BorderRadius } from '../../constants/theme';
 
@@ -221,13 +225,13 @@ export default function MonedasScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-      {/* Modal de Moneda */}
+      {/* Modal de Moneda - ARREGLADO */}
       <Modal
         visible={modalVisible}
         animationType="slide"
         presentationStyle="pageSheet"
       >
-        <SafeAreaView style={styles.modalContainer}>
+        <SafeAreaView style={styles.modalContainer} edges={['top']}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>
               {monedaEditando ? 'Editar Moneda' : 'Nueva Moneda'}
@@ -237,49 +241,81 @@ export default function MonedasScreen() {
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalContent}>
-            <Input
-              label="Código de Moneda *"
-              value={formData.codigo}
-              onChangeText={(text) => setFormData({ ...formData, codigo: text.toUpperCase() })}
-              placeholder="USD, EUR, MLC, etc."
-              maxLength={5}
-              autoCapitalize="characters"
-              editable={!monedaEditando || monedaEditando.codigo !== 'CUP'}
-            />
+          <KeyboardAvoidingView
+            style={styles.modalKeyboardView}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={0}
+          >
+            <ScrollView
+              style={styles.modalScroll}
+              contentContainerStyle={styles.modalContent}
+              keyboardShouldPersistTaps="handled"
+            >
+              <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                <View>
+                  {/* Código de Moneda */}
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Código de Moneda *</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.codigo}
+                      onChangeText={(text) => setFormData({ ...formData, codigo: text.toUpperCase() })}
+                      placeholder="USD, EUR, MLC, etc."
+                      placeholderTextColor="#666"
+                      maxLength={5}
+                      autoCapitalize="characters"
+                      editable={!monedaEditando || monedaEditando.codigo !== 'CUP'}
+                    />
+                  </View>
 
-            <Input
-              label="Nombre *"
-              value={formData.nombre}
-              onChangeText={(text) => setFormData({ ...formData, nombre: text })}
-              placeholder="Dólar Estadounidense, Euro, etc."
-            />
+                  {/* Nombre */}
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Nombre *</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.nombre}
+                      onChangeText={(text) => setFormData({ ...formData, nombre: text })}
+                      placeholder="Dólar Estadounidense, Euro, etc."
+                      placeholderTextColor="#666"
+                      editable={!loading}
+                    />
+                  </View>
 
-            <Input
-              label="Tasa de Cambio (respecto al CUP) *"
-              value={formData.tasa_cambio}
-              onChangeText={(text) => setFormData({ ...formData, tasa_cambio: text })}
-              placeholder="1.0"
-              keyboardType="numeric"
-            />
+                  {/* Tasa de Cambio */}
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Tasa de Cambio (respecto al CUP) *</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.tasa_cambio}
+                      onChangeText={(text) => setFormData({ ...formData, tasa_cambio: text })}
+                      placeholder="1.0"
+                      placeholderTextColor="#666"
+                      keyboardType="numeric"
+                      editable={!loading}
+                    />
+                  </View>
 
-            <Card style={styles.infoCard}>
-              <Text style={styles.infoTitulo}>ℹ️ Información</Text>
-              <Text style={styles.infoTexto}>
-                La tasa de cambio indica cuántos CUP equivalen a 1 unidad de esta moneda.
-              </Text>
-              <Text style={styles.infoTexto}>
-                Ejemplo: Si 1 USD = 120 CUP, entonces la tasa es 120.
-              </Text>
-            </Card>
+                  {/* Card de Información */}
+                  <Card style={styles.infoCard}>
+                    <Text style={styles.infoTitulo}>ℹ️ Información</Text>
+                    <Text style={styles.infoTexto}>
+                      La tasa de cambio indica cuántos CUP equivalen a 1 unidad de esta moneda.
+                    </Text>
+                    <Text style={styles.infoTexto}>
+                      Ejemplo: Si 1 USD = 120 CUP, entonces la tasa es 120.
+                    </Text>
+                  </Card>
 
-            <Button
-              title={monedaEditando ? 'Actualizar' : 'Crear'}
-              onPress={guardarMoneda}
-              loading={loading}
-              style={styles.guardarButton}
-            />
-          </ScrollView>
+                  <Button
+                    title={monedaEditando ? 'Actualizar' : 'Crear'}
+                    onPress={guardarMoneda}
+                    loading={loading}
+                    style={styles.guardarButton}
+                  />
+                </View>
+              </TouchableWithoutFeedback>
+            </ScrollView>
+          </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
@@ -415,9 +451,33 @@ const styles = StyleSheet.create({
     ...Typography.h2,
     color: Colors.dark.text,
   },
-  modalContent: {
+  modalKeyboardView: {
     flex: 1,
+  },
+  modalScroll: {
+    flex: 1,
+  },
+  modalContent: {
     padding: Spacing.lg,
+  },
+  inputContainer: {
+    marginBottom: Spacing.lg,
+  },
+  inputLabel: {
+    ...Typography.body,
+    color: Colors.dark.text,
+    fontWeight: '600',
+    marginBottom: Spacing.xs,
+  },
+  input: {
+    height: 50,
+    backgroundColor: Colors.dark.surface,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.md,
+    fontSize: 16,
+    color: Colors.dark.text,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
   },
   infoCard: {
     backgroundColor: Colors.dark.surfaceVariant,
@@ -436,5 +496,6 @@ const styles = StyleSheet.create({
   },
   guardarButton: {
     marginTop: Spacing.md,
+    marginBottom: Spacing.xl,
   },
 });

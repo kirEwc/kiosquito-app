@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import { Platform } from 'react-native';
 
 import { HapticTab } from '../../components/haptic-tab';
 import { Colors } from '../../constants/theme';
@@ -18,23 +19,39 @@ export default function TabLayout() {
           tabBarStyle: {
             backgroundColor: Colors.dark.surface,
             borderTopColor: Colors.dark.border,
+            borderTopWidth: 1,
+            height: Platform.OS === 'ios' ? 85 : 60,
+            paddingBottom: Platform.OS === 'ios' ? 25 : 8,
+            paddingTop: 8,
+          },
+          tabBarLabelStyle: {
+            fontSize: 12,
+            fontWeight: '600',
           },
         }}>
         <Tabs.Screen
           name="index"
           options={{
             title: 'Ventas',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="storefront" size={size} color={color} />
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons 
+                name={focused ? "cart" : "cart-outline"} 
+                size={size} 
+                color={color} 
+              />
             ),
           }}
         />
         <Tabs.Screen
           name="admin"
           options={{
-            title: 'Administración',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="settings" size={size} color={color} />
+            title: 'Productos',
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons 
+                name={focused ? "cube" : "cube-outline"} 
+                size={size} 
+                color={color} 
+              />
             ),
           }}
         />
@@ -42,8 +59,12 @@ export default function TabLayout() {
           name="monedas"
           options={{
             title: 'Monedas',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="cash" size={size} color={color} />
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons 
+                name={focused ? "cash" : "cash-outline"} 
+                size={size} 
+                color={color} 
+              />
             ),
           }}
         />
@@ -51,8 +72,12 @@ export default function TabLayout() {
           name="perfil"
           options={{
             title: 'Perfil',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="person" size={size} color={color} />
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons 
+                name={focused ? "person" : "person-outline"} 
+                size={size} 
+                color={color} 
+              />
             ),
           }}
         />

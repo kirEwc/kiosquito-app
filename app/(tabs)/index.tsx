@@ -3,28 +3,36 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   Alert,
-  Modal,
-  FlatList,
   TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
+  TextInput,
+  ScrollView,
+  FlatList,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
-import { databaseService, Producto, Moneda, Venta } from '../../services/database';
+import { databaseService, Producto, Moneda } from '../../services/database';
 import { Colors, Spacing, Typography, BorderRadius } from '../../constants/theme';
+
+type MetodoPago = 'efectivo' | 'transferencia' | 'otra_moneda';
 
 export default function VentasScreen() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [monedas, setMonedas] = useState<Moneda[]>([]);
-  const [ventaModalVisible, setVentaModalVisible] = useState(false);
   const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null);
-  const [cantidad, setCantidad] = useState('1');
+  const [cantidad, setCantidad] = useState(1);
+  const [metodoPago, setMetodoPago] = useState<MetodoPago>('efectivo');
   const [monedaSeleccionada, setMonedaSeleccionada] = useState<Moneda | null>(null);
   const [loading, setLoading] = useState(false);
+  const [modalProductosVisible, setModalProductosVisible] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
 
   useEffect(() => {
     cargarDatos();
@@ -36,7 +44,7 @@ export default function VentasScreen() {
         databaseService.getProductos(),
         databaseService.getMonedas(),
       ]);
-      setProductos(productosData);
+      setProductos(productosData.filter(p => p.stock > 0));
       setMonedas(monedasData);
       
       // Seleccionar CUP por defecto
@@ -48,180 +56,345 @@ export default function VentasScreen() {
     }
   };
 
-  const abrirVentaModal = (producto: Producto) => {
-    if (producto.stock <= 0) {
-      Alert.alert('Sin Stock', 'Este producto no tiene stock disponible');
-      return;
-    }
-    setProductoSeleccionado(producto);
-    setCantidad('1');
-    setVentaModalVisible(true);
+  const getFechaActual = () => {
+    const fecha = new Date();
+    const opciones: Intl.DateTimeFormatOptions = { 
+      weekday: 'long', 
+      day: 'numeric', 
+      month: 'short', 
+      year: 'numeric' 
+    };
+    return fecha.toLocaleDateString('es-ES', opciones);
   };
 
-  const realizarVenta = async () => {
-    if (!productoSeleccionado || !monedaSeleccionada) return;
+  const seleccionarProducto = (producto: Producto) => {
+    setProductoSeleccionado(producto);
+    setCantidad(1);
+    setModalProductosVisible(false);
+    setBusqueda('');
+  };
 
-    const cantidadNum = parseInt(cantidad);
-    if (isNaN(cantidadNum) || cantidadNum <= 0) {
-      Alert.alert('Error', 'Ingresa una cantidad válida');
+  const ajustarCantidad = (incremento: number) => {
+    if (!productoSeleccionado) return;
+    
+    const nuevaCantidad = cantidad + incremento;
+    if (nuevaCantidad >= 1 && nuevaCantidad <= productoSeleccionado.stock) {
+      setCantidad(nuevaCantidad);
+    }
+  };
+
+  const calcularTotal = () => {
+    if (!productoSeleccionado) return 0;
+    return productoSeleccionado.precio_cup * cantidad;
+  };
+
+  const calcularTotalConvertido = () => {
+    if (!productoSeleccionado || !monedaSeleccionada || metodoPago !== 'otra_moneda') return 0;
+    return calcularTotal() / monedaSeleccionada.tasa_cambio;
+  };
+
+  const registrarVenta = async () => {
+    if (!productoSeleccionado) {
+      Alert.alert('Error', 'Selecciona un producto');
       return;
     }
 
-    if (cantidadNum > productoSeleccionado.stock) {
-      Alert.alert('Error', 'No hay suficiente stock disponible');
+    if (!monedaSeleccionada) {
+      Alert.alert('Error', 'No hay moneda seleccionada');
+      return;
+    }
+
+    if (cantidad <= 0 || cantidad > productoSeleccionado.stock) {
+      Alert.alert('Error', 'Cantidad inválida');
       return;
     }
 
     setLoading(true);
     try {
       const precioUnitario = productoSeleccionado.precio_cup;
-      const totalCup = precioUnitario * cantidadNum * monedaSeleccionada.tasa_cambio;
+      const totalCup = calcularTotal();
 
       await databaseService.createVenta({
         producto_id: productoSeleccionado.id!,
-        cantidad: cantidadNum,
+        cantidad: cantidad,
         precio_unitario: precioUnitario,
         moneda_id: monedaSeleccionada.id!,
         total_cup: totalCup,
       });
 
-      Alert.alert('Éxito', 'Venta registrada correctamente');
-      setVentaModalVisible(false);
-      cargarDatos(); // Recargar para actualizar stock
+      Alert.alert('✅ Éxito', 'Venta registrada correctamente');
+      
+      // Limpiar campos
+      setProductoSeleccionado(null);
+      setCantidad(1);
+      setMetodoPago('efectivo');
+      
+      // Recargar productos para actualizar stock
+      cargarDatos();
     } catch (error) {
-      console.error('Error realizando venta:', error);
+      console.error('Error registrando venta:', error);
       Alert.alert('Error', 'No se pudo registrar la venta');
     } finally {
       setLoading(false);
     }
   };
 
-  const calcularTotal = () => {
-    if (!productoSeleccionado || !monedaSeleccionada) return 0;
-    const cantidadNum = parseInt(cantidad) || 0;
-    return productoSeleccionado.precio_cup * cantidadNum * monedaSeleccionada.tasa_cambio;
-  };
+  const productosFiltrados = productos.filter(p =>
+    p.nombre.toLowerCase().includes(busqueda.toLowerCase())
+  );
 
-  const renderProducto = ({ item }: { item: Producto }) => (
-    <TouchableOpacity onPress={() => abrirVentaModal(item)}>
-      <Card style={styles.productoCard}>
-        <View style={styles.productoHeader}>
-          <Text style={styles.productoNombre}>{item.nombre}</Text>
-          <View style={[
-            styles.stockBadge,
-            { backgroundColor: item.stock > 0 ? Colors.dark.success : Colors.dark.error }
-          ]}>
-            <Text style={styles.stockText}>{item.stock}</Text>
-          </View>
-        </View>
-        
-        <Text style={styles.productoPrecio}>${item.precio_cup} CUP</Text>
-        
-        {item.descripcion && (
-          <Text style={styles.productoDescripcion}>{item.descripcion}</Text>
-        )}
-        
-        <View style={styles.productoFooter}>
-          <Text style={styles.stockLabel}>Stock disponible</Text>
-          <Ionicons 
-            name="chevron-forward" 
-            size={20} 
-            color={Colors.dark.icon} 
-          />
-        </View>
-      </Card>
+  const renderProductoItem = ({ item }: { item: Producto }) => (
+    <TouchableOpacity
+      style={styles.productoItem}
+      onPress={() => seleccionarProducto(item)}
+    >
+      <View style={styles.productoItemInfo}>
+        <Text style={styles.productoItemNombre}>{item.nombre}</Text>
+        <Text style={styles.productoItemPrecio}>${item.precio_cup} CUP</Text>
+        <Text style={styles.productoItemStock}>Stock: {item.stock}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={20} color={Colors.dark.icon} />
     </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>🛒 Punto de Venta</Text>
-        <Text style={styles.subtitle}>Selecciona un producto para vender</Text>
-      </View>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled">
+            {/* Header */}
+            <View style={styles.header}>
+              <Text style={styles.title}>🧾 Registrar Venta</Text>
+              <Text style={styles.fecha}>{getFechaActual()}</Text>
+            </View>
 
-      <FlatList
-        data={productos}
-        renderItem={renderProducto}
-        keyExtractor={(item) => item.id!.toString()}
-        contentContainerStyle={styles.lista}
-        showsVerticalScrollIndicator={false}
-      />
+            <View style={styles.content}>
+              {/* 1. Selección de Producto */}
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>Producto *</Text>
+                <TouchableOpacity
+                  style={styles.selectorProducto}
+                  onPress={() => setModalProductosVisible(true)}
+                >
+                  <View style={styles.selectorContent}>
+                    {productoSeleccionado ? (
+                      <>
+                        <View>
+                          <Text style={styles.productoSeleccionadoNombre}>
+                            {productoSeleccionado.nombre}
+                          </Text>
+                          <Text style={styles.productoSeleccionadoInfo}>
+                            ${productoSeleccionado.precio_cup} CUP • Stock: {productoSeleccionado.stock}
+                          </Text>
+                        </View>
+                      </>
+                    ) : (
+                      <Text style={styles.selectorPlaceholder}>
+                        Selecciona un producto
+                      </Text>
+                    )}
+                  </View>
+                  <Ionicons name="chevron-down" size={20} color={Colors.dark.icon} />
+                </TouchableOpacity>
+              </View>
 
-      {/* Modal de Venta */}
+              {/* 2. Cantidad */}
+              {productoSeleccionado && (
+                <View style={styles.section}>
+                  <Text style={styles.sectionLabel}>Cantidad *</Text>
+                  <View style={styles.cantidadControl}>
+                    <TouchableOpacity
+                      style={styles.cantidadButton}
+                      onPress={() => ajustarCantidad(-1)}
+                      disabled={cantidad <= 1}
+                    >
+                      <Ionicons 
+                        name="remove" 
+                        size={24} 
+                        color={cantidad <= 1 ? Colors.dark.border : Colors.dark.text} 
+                      />
+                    </TouchableOpacity>
+                    
+                    <View style={styles.cantidadDisplay}>
+                      <Text style={styles.cantidadTexto}>{cantidad}</Text>
+                    </View>
+                    
+                    <TouchableOpacity
+                      style={styles.cantidadButton}
+                      onPress={() => ajustarCantidad(1)}
+                      disabled={cantidad >= productoSeleccionado.stock}
+                    >
+                      <Ionicons 
+                        name="add" 
+                        size={24} 
+                        color={cantidad >= productoSeleccionado.stock ? Colors.dark.border : Colors.dark.text} 
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.helperText}>
+                    Máximo disponible: {productoSeleccionado.stock}
+                  </Text>
+                </View>
+              )}
+
+              {/* 3. Precio Total */}
+              {productoSeleccionado && (
+                <Card style={styles.totalCard}>
+                  <Text style={styles.totalLabel}>Precio Total</Text>
+                  <Text style={styles.totalAmount}>
+                    ${calcularTotal().toFixed(2)} CUP
+                  </Text>
+                  {metodoPago === 'otra_moneda' && monedaSeleccionada?.codigo !== 'CUP' && (
+                    <Text style={styles.totalConvertido}>
+                      ≈ {calcularTotalConvertido().toFixed(2)} {monedaSeleccionada?.codigo}
+                    </Text>
+                  )}
+                </Card>
+              )}
+
+              {/* 4. Método de Pago */}
+              {productoSeleccionado && (
+                <View style={styles.section}>
+                  <Text style={styles.sectionLabel}>Método de Pago *</Text>
+                  
+                  <TouchableOpacity
+                    style={[
+                      styles.metodoPagoButton,
+                      metodoPago === 'efectivo' && styles.metodoPagoSelected
+                    ]}
+                    onPress={() => setMetodoPago('efectivo')}
+                  >
+                    <View style={styles.radioOuter}>
+                      {metodoPago === 'efectivo' && <View style={styles.radioInner} />}
+                    </View>
+                    <Ionicons name="cash" size={24} color={Colors.dark.text} />
+                    <Text style={styles.metodoPagoText}>Efectivo (CUP)</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.metodoPagoButton,
+                      metodoPago === 'transferencia' && styles.metodoPagoSelected
+                    ]}
+                    onPress={() => setMetodoPago('transferencia')}
+                  >
+                    <View style={styles.radioOuter}>
+                      {metodoPago === 'transferencia' && <View style={styles.radioInner} />}
+                    </View>
+                    <Ionicons name="card" size={24} color={Colors.dark.text} />
+                    <Text style={styles.metodoPagoText}>Transferencia</Text>
+                  </TouchableOpacity>
+
+                  {monedas.filter(m => m.codigo !== 'CUP' && m.activa).length > 0 && (
+                    <TouchableOpacity
+                      style={[
+                        styles.metodoPagoButton,
+                        metodoPago === 'otra_moneda' && styles.metodoPagoSelected
+                      ]}
+                      onPress={() => setMetodoPago('otra_moneda')}
+                    >
+                      <View style={styles.radioOuter}>
+                        {metodoPago === 'otra_moneda' && <View style={styles.radioInner} />}
+                      </View>
+                      <Ionicons name="logo-usd" size={24} color={Colors.dark.text} />
+                      <Text style={styles.metodoPagoText}>Otra Moneda</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {/* Selector de Moneda */}
+                  {metodoPago === 'otra_moneda' && (
+                    <View style={styles.monedasContainer}>
+                      {monedas.filter(m => m.activa).map((moneda) => (
+                        <TouchableOpacity
+                          key={moneda.id}
+                          style={[
+                            styles.monedaChip,
+                            monedaSeleccionada?.id === moneda.id && styles.monedaChipSelected
+                          ]}
+                          onPress={() => setMonedaSeleccionada(moneda)}
+                        >
+                          <Text style={[
+                            styles.monedaChipText,
+                            monedaSeleccionada?.id === moneda.id && styles.monedaChipTextSelected
+                          ]}>
+                            {moneda.codigo}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {/* 5. Botón Registrar Venta */}
+              {productoSeleccionado && (
+                <Button
+                  title="Registrar Venta"
+                  onPress={registrarVenta}
+                  loading={loading}
+                  style={styles.registrarButton}
+                />
+              )}
+
+              {/* Ayuda inicial */}
+              {!productoSeleccionado && (
+                <Card style={styles.helpCard}>
+                  <Ionicons name="information-circle" size={32} color={Colors.dark.primary} />
+                  <Text style={styles.helpTitle}>¿Cómo registrar una venta?</Text>
+                  <Text style={styles.helpText}>
+                    1. Selecciona un producto{'\n'}
+                    2. Ajusta la cantidad{'\n'}
+                    3. Elige el método de pago{'\n'}
+                    4. Confirma la venta
+                  </Text>
+                </Card>
+              )}
+            </View>
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
+
+      {/* Modal de Selección de Productos */}
       <Modal
-        visible={ventaModalVisible}
+        visible={modalProductosVisible}
         animationType="slide"
         presentationStyle="pageSheet"
       >
-        <SafeAreaView style={styles.modalContainer}>
+        <SafeAreaView style={styles.modalContainer} edges={['top']}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Registrar Venta</Text>
-            <TouchableOpacity onPress={() => setVentaModalVisible(false)}>
+            <Text style={styles.modalTitle}>Seleccionar Producto</Text>
+            <TouchableOpacity onPress={() => setModalProductosVisible(false)}>
               <Ionicons name="close" size={24} color={Colors.dark.text} />
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalContent}>
-            {productoSeleccionado && (
-              <Card style={styles.productoInfo}>
-                <Text style={styles.productoNombre}>{productoSeleccionado.nombre}</Text>
-                <Text style={styles.productoPrecio}>${productoSeleccionado.precio_cup} CUP</Text>
-                <Text style={styles.stockDisponible}>
-                  Stock disponible: {productoSeleccionado.stock}
-                </Text>
-              </Card>
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color={Colors.dark.icon} style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              value={busqueda}
+              onChangeText={setBusqueda}
+              placeholder="Buscar producto..."
+              placeholderTextColor="#666"
+              autoFocus
+            />
+          </View>
+
+          <FlatList
+            data={productosFiltrados}
+            renderItem={renderProductoItem}
+            keyExtractor={(item) => item.id!.toString()}
+            contentContainerStyle={styles.modalLista}
+            ListEmptyComponent={() => (
+              <View style={styles.emptyState}>
+                <Ionicons name="search-outline" size={48} color={Colors.dark.border} />
+                <Text style={styles.emptyText}>No se encontraron productos</Text>
+              </View>
             )}
-
-            <Input
-              label="Cantidad"
-              value={cantidad}
-              onChangeText={setCantidad}
-              keyboardType="numeric"
-              placeholder="Ingresa la cantidad"
-            />
-
-            <Text style={styles.sectionTitle}>Moneda</Text>
-            <View style={styles.monedasContainer}>
-              {monedas.map((moneda) => (
-                <TouchableOpacity
-                  key={moneda.id}
-                  style={[
-                    styles.monedaButton,
-                    monedaSeleccionada?.id === moneda.id && styles.monedaSelected
-                  ]}
-                  onPress={() => setMonedaSeleccionada(moneda)}
-                >
-                  <Text style={[
-                    styles.monedaText,
-                    monedaSeleccionada?.id === moneda.id && styles.monedaTextSelected
-                  ]}>
-                    {moneda.codigo}
-                  </Text>
-                  <Text style={[
-                    styles.monedaTasa,
-                    monedaSeleccionada?.id === moneda.id && styles.monedaTextSelected
-                  ]}>
-                    {moneda.tasa_cambio}x
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <Card style={styles.totalCard}>
-              <Text style={styles.totalLabel}>Total a pagar:</Text>
-              <Text style={styles.totalAmount}>
-                ${calcularTotal().toFixed(2)} {monedaSeleccionada?.codigo || 'CUP'}
-              </Text>
-            </Card>
-
-            <Button
-              title="Confirmar Venta"
-              onPress={realizarVenta}
-              loading={loading}
-              style={styles.confirmarButton}
-            />
-          </ScrollView>
+          />
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
@@ -232,6 +405,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.dark.background,
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  scroll: {
+    flex: 1,
   },
   header: {
     padding: Spacing.lg,
@@ -244,59 +423,184 @@ const styles = StyleSheet.create({
     color: Colors.dark.text,
     marginBottom: Spacing.xs,
   },
-  subtitle: {
-    ...Typography.body,
+  fecha: {
+    ...Typography.caption,
     color: Colors.dark.secondary,
+    textTransform: 'capitalize',
   },
-  lista: {
+  content: {
     padding: Spacing.lg,
   },
-  productoCard: {
-    marginBottom: Spacing.md,
+  section: {
+    marginBottom: Spacing.lg,
   },
-  productoHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+  sectionLabel: {
+    ...Typography.body,
+    color: Colors.dark.text,
+    fontWeight: '600',
     marginBottom: Spacing.sm,
   },
-  productoNombre: {
+  selectorProducto: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.dark.surface,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+    minHeight: 60,
+  },
+  selectorContent: {
+    flex: 1,
+  },
+  selectorPlaceholder: {
+    ...Typography.body,
+    color: Colors.dark.secondary,
+  },
+  productoSeleccionadoNombre: {
+    ...Typography.body,
+    color: Colors.dark.text,
+    fontWeight: '600',
+    marginBottom: Spacing.xs,
+  },
+  productoSeleccionadoInfo: {
+    ...Typography.caption,
+    color: Colors.dark.secondary,
+  },
+  cantidadControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.lg,
+  },
+  cantidadButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.dark.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+  },
+  cantidadDisplay: {
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  cantidadTexto: {
+    ...Typography.h1,
+    color: Colors.dark.text,
+    fontWeight: 'bold',
+  },
+  helperText: {
+    ...Typography.caption,
+    color: Colors.dark.secondary,
+    textAlign: 'center',
+    marginTop: Spacing.sm,
+  },
+  totalCard: {
+    backgroundColor: Colors.dark.primary + '20',
+    borderColor: Colors.dark.primary,
+    borderWidth: 2,
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  totalLabel: {
+    ...Typography.body,
+    color: Colors.dark.text,
+    marginBottom: Spacing.xs,
+  },
+  totalAmount: {
+    ...Typography.h1,
+    color: Colors.dark.primary,
+    fontWeight: 'bold',
+  },
+  totalConvertido: {
+    ...Typography.body,
+    color: Colors.dark.secondary,
+    marginTop: Spacing.xs,
+  },
+  metodoPagoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.dark.surface,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 2,
+    borderColor: Colors.dark.border,
+    marginBottom: Spacing.sm,
+    gap: Spacing.md,
+  },
+  metodoPagoSelected: {
+    borderColor: Colors.dark.primary,
+    backgroundColor: Colors.dark.primary + '10',
+  },
+  radioOuter: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: Colors.dark.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: Colors.dark.primary,
+  },
+  metodoPagoText: {
+    ...Typography.body,
+    color: Colors.dark.text,
+    fontWeight: '600',
+    flex: 1,
+  },
+  monedasContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+  },
+  monedaChip: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.dark.surface,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+  },
+  monedaChipSelected: {
+    backgroundColor: Colors.dark.primary,
+    borderColor: Colors.dark.primary,
+  },
+  monedaChipText: {
+    ...Typography.body,
+    color: Colors.dark.text,
+    fontWeight: '600',
+  },
+  monedaChipTextSelected: {
+    color: Colors.dark.surface,
+  },
+  registrarButton: {
+    marginTop: Spacing.lg,
+  },
+  helpCard: {
+    alignItems: 'center',
+    padding: Spacing.xl,
+  },
+  helpTitle: {
     ...Typography.h3,
     color: Colors.dark.text,
-    flex: 1,
-    marginRight: Spacing.sm,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.sm,
   },
-  stockBadge: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.full,
-    minWidth: 40,
-    alignItems: 'center',
-  },
-  stockText: {
-    ...Typography.caption,
-    color: Colors.dark.surface,
-    fontWeight: '600',
-  },
-  productoPrecio: {
+  helpText: {
     ...Typography.body,
-    color: Colors.dark.primary,
-    fontWeight: '600',
-    marginBottom: Spacing.sm,
-  },
-  productoDescripcion: {
-    ...Typography.caption,
     color: Colors.dark.secondary,
-    marginBottom: Spacing.sm,
-  },
-  productoFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  stockLabel: {
-    ...Typography.caption,
-    color: Colors.dark.secondary,
+    textAlign: 'center',
+    lineHeight: 24,
   },
   modalContainer: {
     flex: 1,
@@ -314,70 +618,64 @@ const styles = StyleSheet.create({
     ...Typography.h2,
     color: Colors.dark.text,
   },
-  modalContent: {
-    flex: 1,
-    padding: Spacing.lg,
-  },
-  productoInfo: {
-    marginBottom: Spacing.lg,
-  },
-  stockDisponible: {
-    ...Typography.caption,
-    color: Colors.dark.secondary,
-    marginTop: Spacing.xs,
-  },
-  sectionTitle: {
-    ...Typography.h3,
-    color: Colors.dark.text,
-    marginBottom: Spacing.md,
-  },
-  monedasContainer: {
+  searchContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-    marginBottom: Spacing.lg,
-  },
-  monedaButton: {
+    alignItems: 'center',
+    margin: Spacing.lg,
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.dark.surface,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
     borderColor: Colors.dark.border,
-    backgroundColor: Colors.dark.surface,
+  },
+  searchIcon: {
+    marginRight: Spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    height: 48,
+    color: Colors.dark.text,
+    fontSize: 16,
+  },
+  modalLista: {
+    padding: Spacing.lg,
+  },
+  productoItem: {
+    flexDirection: 'row',
     alignItems: 'center',
-    minWidth: 80,
+    justifyContent: 'space-between',
+    backgroundColor: Colors.dark.surface,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
   },
-  monedaSelected: {
-    backgroundColor: Colors.dark.primary,
-    borderColor: Colors.dark.primary,
+  productoItemInfo: {
+    flex: 1,
   },
-  monedaText: {
+  productoItemNombre: {
     ...Typography.body,
     color: Colors.dark.text,
     fontWeight: '600',
-  },
-  monedaTasa: {
-    ...Typography.small,
-    color: Colors.dark.secondary,
-  },
-  monedaTextSelected: {
-    color: Colors.dark.surface,
-  },
-  totalCard: {
-    backgroundColor: Colors.dark.surfaceVariant,
-    marginBottom: Spacing.lg,
-  },
-  totalLabel: {
-    ...Typography.body,
-    color: Colors.dark.text,
     marginBottom: Spacing.xs,
   },
-  totalAmount: {
-    ...Typography.h2,
+  productoItemPrecio: {
+    ...Typography.body,
     color: Colors.dark.primary,
-    fontWeight: 'bold',
+    marginBottom: Spacing.xs,
   },
-  confirmarButton: {
+  productoItemStock: {
+    ...Typography.caption,
+    color: Colors.dark.secondary,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: Spacing.xxl,
+  },
+  emptyText: {
+    ...Typography.body,
+    color: Colors.dark.secondary,
     marginTop: Spacing.md,
   },
 });

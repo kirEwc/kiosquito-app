@@ -6,6 +6,7 @@ import {
   ScrollView,
   Alert,
   TouchableOpacity,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +20,7 @@ import { Colors, Spacing, Typography, BorderRadius } from '../../constants/theme
 export default function PerfilScreen() {
   const { user, logout } = useAuth();
   const [estadisticas, setEstadisticas] = useState<any>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     cargarEstadisticas();
@@ -48,6 +50,12 @@ export default function PerfilScreen() {
     }
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await cargarEstadisticas();
+    setRefreshing(false);
+  };
+
   const handleLogout = () => {
     Alert.alert(
       'Cerrar Sesión',
@@ -68,35 +76,48 @@ export default function PerfilScreen() {
 
   const menuItems = [
     {
-      icon: 'storefront',
+      icon: 'cart',
       title: 'Ir a Ventas',
       subtitle: 'Registrar nuevas ventas',
+      color: Colors.dark.primary,
       onPress: () => router.push('/(tabs)'),
     },
     {
-      icon: 'settings',
-      title: 'Administración',
-      subtitle: 'Gestionar productos y ver reportes',
+      icon: 'cube',
+      title: 'Productos',
+      subtitle: 'Gestionar inventario y precios',
+      color: Colors.dark.success,
       onPress: () => router.push('/(tabs)/admin'),
     },
     {
       icon: 'cash',
       title: 'Monedas y Tasas',
       subtitle: 'Configurar monedas y tasas de cambio',
+      color: '#f59e0b',
       onPress: () => router.push('/(tabs)/monedas'),
     },
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.dark.primary}
+            colors={[Colors.dark.primary]}
+          />
+        }
+      >
         {/* Header del perfil */}
         <View style={styles.header}>
           <View style={styles.avatarContainer}>
             <Text style={styles.avatarText}>👤</Text>
           </View>
           <Text style={styles.userName}>{user?.username}</Text>
-          <Text style={styles.userRole}>Administrador</Text>
+          <Text style={styles.userRole}>Administrador del Sistema</Text>
         </View>
 
         {/* Estadísticas rápidas */}
@@ -119,12 +140,18 @@ export default function PerfilScreen() {
               </View>
             </View>
 
+            <View style={styles.divider} />
+
             <View style={styles.statsRow}>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>${(estadisticas.mes?.total_ingresos || 0).toFixed(2)}</Text>
+              <View style={styles.statItemLarge}>
+                <Text style={styles.statNumberLarge}>
+                  ${(estadisticas.mes?.total_ingresos || 0).toFixed(2)}
+                </Text>
                 <Text style={styles.statLabel}>Ingresos del Mes (CUP)</Text>
               </View>
             </View>
+
+            <View style={styles.divider} />
 
             <View style={styles.statsGrid}>
               <View style={styles.statItem}>
@@ -155,11 +182,15 @@ export default function PerfilScreen() {
           {menuItems.map((item, index) => (
             <TouchableOpacity
               key={index}
-              style={styles.menuItem}
+              style={[
+                styles.menuItem,
+                index === menuItems.length - 1 && styles.menuItemLast
+              ]}
               onPress={item.onPress}
+              activeOpacity={0.7}
             >
-              <View style={styles.menuIcon}>
-                <Ionicons name={item.icon as any} size={24} color={Colors.dark.primary} />
+              <View style={[styles.menuIcon, { backgroundColor: item.color + '20' }]}>
+                <Ionicons name={item.icon as any} size={24} color={item.color} />
               </View>
               <View style={styles.menuContent}>
                 <Text style={styles.menuTitle}>{item.title}</Text>
@@ -172,7 +203,7 @@ export default function PerfilScreen() {
 
         {/* Información de la app */}
         <Card style={styles.infoCard}>
-          <Text style={styles.sectionTitle}>ℹ️ Información</Text>
+          <Text style={styles.sectionTitle}>ℹ️ Información del Sistema</Text>
           
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Aplicación:</Text>
@@ -184,7 +215,7 @@ export default function PerfilScreen() {
             <Text style={styles.infoValue}>SQLite Local</Text>
           </View>
           
-          <View style={styles.infoRow}>
+          <View style={[styles.infoRow, styles.infoRowLast]}>
             <Text style={styles.infoLabel}>Moneda Principal:</Text>
             <Text style={styles.infoValue}>CUP (Peso Cubano)</Text>
           </View>
@@ -224,6 +255,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.md,
+    shadowColor: Colors.dark.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   avatarText: {
     fontSize: 40,
@@ -248,17 +284,25 @@ const styles = StyleSheet.create({
   statsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: Spacing.md,
   },
   statsRow: {
     alignItems: 'center',
-    marginBottom: Spacing.md,
   },
   statItem: {
     alignItems: 'center',
+    flex: 1,
+  },
+  statItemLarge: {
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
   },
   statNumber: {
     ...Typography.h2,
+    color: Colors.dark.primary,
+    fontWeight: 'bold',
+  },
+  statNumberLarge: {
+    ...Typography.h1,
     color: Colors.dark.primary,
     fontWeight: 'bold',
   },
@@ -267,6 +311,11 @@ const styles = StyleSheet.create({
     color: Colors.dark.secondary,
     textAlign: 'center',
     marginTop: Spacing.xs,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: Colors.dark.border,
+    marginVertical: Spacing.md,
   },
   menuCard: {
     marginHorizontal: Spacing.lg,
@@ -279,11 +328,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.dark.border,
   },
+  menuItemLast: {
+    borderBottomWidth: 0,
+  },
   menuIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.dark.surfaceVariant,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: Spacing.md,
@@ -309,9 +360,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: Colors.dark.border,
+  },
+  infoRowLast: {
+    borderBottomWidth: 0,
   },
   infoLabel: {
     ...Typography.body,
@@ -324,8 +378,9 @@ const styles = StyleSheet.create({
   },
   logoutContainer: {
     padding: Spacing.lg,
+    paddingBottom: Spacing.xxl,
   },
   logoutButton: {
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.md,
   },
 });
