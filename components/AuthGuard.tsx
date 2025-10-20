@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
-import { Colors } from '../constants/theme';
+import { Colors, Typography } from '../constants/theme';
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -11,8 +11,12 @@ interface AuthGuardProps {
 export function AuthGuard({ children }: AuthGuardProps) {
   const { user, isLoading } = useAuth();
 
+  // Debug: Log para ver el estado
+  console.log('AuthGuard - isLoading:', isLoading, 'user:', !!user);
+
   useEffect(() => {
     if (!isLoading && !user) {
+      console.log('AuthGuard - Redirecting to login');
       router.replace('/login');
     }
   }, [user, isLoading]);
@@ -20,11 +24,14 @@ export function AuthGuard({ children }: AuthGuardProps) {
   if (isLoading) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator size="large" color={Colors.light.primary} />
+        <Text style={styles.logo}>🏪</Text>
+        <ActivityIndicator size="large" color={Colors.dark.primary} />
+        <Text style={styles.loadingText}>Cargando...</Text>
       </View>
     );
   }
 
+  // Si no hay usuario, mostrar null (será redirigido al login)
   if (!user) {
     return null;
   }
@@ -37,6 +44,15 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.light.background,
+    backgroundColor: Colors.dark.background,
+  },
+  logo: {
+    fontSize: 48,
+    marginBottom: 20,
+  },
+  loadingText: {
+    ...Typography.body,
+    color: Colors.dark.text,
+    marginTop: 16,
   },
 });

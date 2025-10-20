@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,47 +13,80 @@ import {
   Keyboard,
   TextInput,
   ScrollView,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
-import { databaseService, Producto, Venta } from '../../services/database';
-import { Colors, Spacing, Typography, BorderRadius } from '../../constants/theme';
+  RefreshControl,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { Card } from "../../components/ui/Card";
+import { Button } from "../../components/ui/Button";
+import { databaseService, Producto, Venta } from "../../services/database";
+import { useAuth } from "../../contexts/AuthContext";
+import { AuthService } from "../../services/auth";
+import {
+  Colors,
+  Spacing,
+  Typography,
+  BorderRadius,
+} from "../../constants/theme";
 
 export default function AdminScreen() {
+  const { logout } = useAuth();
   const [productos, setProductos] = useState<Producto[]>([]);
   const [ventas, setVentas] = useState<Venta[]>([]);
   const [resumenVentas, setResumenVentas] = useState<any>(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const [productoEditando, setProductoEditando] = useState<Producto | null>(null);
+  const [productoEditando, setProductoEditando] = useState<Producto | null>(
+    null
+  );
   const [formData, setFormData] = useState({
-    nombre: '',
-    precio_cup: '',
-    stock: '',
-    descripcion: '',
-    categoria: '',
+    nombre: "",
+    precio_cup: "",
+    stock: "",
+    descripcion: "",
+    categoria: "",
   });
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'productos' | 'ventas'>('productos');
+  const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState<"productos" | "ventas">(
+    "productos"
+  );
 
   useEffect(() => {
     cargarDatos();
   }, []);
 
-  const cargarDatos = async () => {
+  // Recargar datos cuando se enfoque la pantalla
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (activeTab === "ventas") {
+        cargarDatos();
+      }
+    }, 5000); // Recargar cada 5 segundos cuando esté en la pestaña de ventas
+
+    return () => clearInterval(interval);
+  }, [activeTab]);
+
+  const cargarDatos = async (isRefreshing = false) => {
+    if (isRefreshing) {
+      setRefreshing(true);
+    }
+
     try {
       const [productosData, ventasData, resumenData] = await Promise.all([
         databaseService.getProductos(),
         databaseService.getVentas(),
-        databaseService.getResumenVentas('dia'),
+        databaseService.getResumenVentas("dia"),
       ]);
       setProductos(productosData);
       setVentas(ventasData);
       setResumenVentas(resumenData);
     } catch (error) {
-      console.error('Error cargando datos:', error);
-      Alert.alert('Error', 'No se pudieron cargar los datos');
+      console.error("Error cargando datos:", error);
+      Alert.alert("Error", "No se pudieron cargar los datos");
+    } finally {
+      if (isRefreshing) {
+        setRefreshing(false);
+      }
     }
   };
 
@@ -64,17 +97,17 @@ export default function AdminScreen() {
         nombre: producto.nombre,
         precio_cup: producto.precio_cup.toString(),
         stock: producto.stock.toString(),
-        descripcion: producto.descripcion || '',
-        categoria: producto.categoria || '',
+        descripcion: producto.descripcion || "",
+        categoria: producto.categoria || "",
       });
     } else {
       setProductoEditando(null);
       setFormData({
-        nombre: '',
-        precio_cup: '',
-        stock: '',
-        descripcion: '',
-        categoria: '',
+        nombre: "",
+        precio_cup: "",
+        stock: "",
+        descripcion: "",
+        categoria: "",
       });
     }
     setModalVisible(true);
@@ -82,7 +115,7 @@ export default function AdminScreen() {
 
   const guardarProducto = async () => {
     if (!formData.nombre.trim() || !formData.precio_cup || !formData.stock) {
-      Alert.alert('Error', 'Por favor completa los campos obligatorios');
+      Alert.alert("Error", "Por favor completa los campos obligatorios");
       return;
     }
 
@@ -90,12 +123,15 @@ export default function AdminScreen() {
     const stock = parseInt(formData.stock);
 
     if (isNaN(precio) || precio <= 0) {
-      Alert.alert('Error', 'El precio debe ser un número válido mayor a 0');
+      Alert.alert("Error", "El precio debe ser un número válido mayor a 0");
       return;
     }
 
     if (isNaN(stock) || stock < 0) {
-      Alert.alert('Error', 'El stock debe ser un número válido mayor o igual a 0');
+      Alert.alert(
+        "Error",
+        "El stock debe ser un número válido mayor o igual a 0"
+      );
       return;
     }
 
@@ -110,18 +146,21 @@ export default function AdminScreen() {
       };
 
       if (productoEditando) {
-        await databaseService.updateProducto(productoEditando.id!, productoData);
-        Alert.alert('Éxito', 'Producto actualizado correctamente');
+        await databaseService.updateProducto(
+          productoEditando.id!,
+          productoData
+        );
+        Alert.alert("Éxito", "Producto actualizado correctamente");
       } else {
         await databaseService.createProducto(productoData);
-        Alert.alert('Éxito', 'Producto creado correctamente');
+        Alert.alert("Éxito", "Producto creado correctamente");
       }
 
       setModalVisible(false);
       cargarDatos();
     } catch (error) {
-      console.error('Error guardando producto:', error);
-      Alert.alert('Error', 'No se pudo guardar el producto');
+      console.error("Error guardando producto:", error);
+      Alert.alert("Error", "No se pudo guardar el producto");
     } finally {
       setLoading(false);
     }
@@ -129,21 +168,21 @@ export default function AdminScreen() {
 
   const eliminarProducto = (producto: Producto) => {
     Alert.alert(
-      'Confirmar eliminación',
+      "Confirmar eliminación",
       `¿Estás seguro de que quieres eliminar "${producto.nombre}"?`,
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: "Cancelar", style: "cancel" },
         {
-          text: 'Eliminar',
-          style: 'destructive',
+          text: "Eliminar",
+          style: "destructive",
           onPress: async () => {
             try {
               await databaseService.deleteProducto(producto.id!);
-              Alert.alert('Éxito', 'Producto eliminado correctamente');
+              Alert.alert("Éxito", "Producto eliminado correctamente");
               cargarDatos();
             } catch (error) {
-              console.error('Error eliminando producto:', error);
-              Alert.alert('Error', 'No se pudo eliminar el producto');
+              console.error("Error eliminando producto:", error);
+              Alert.alert("Error", "No se pudo eliminar el producto");
             }
           },
         },
@@ -188,41 +227,70 @@ export default function AdminScreen() {
       <View style={styles.ventaHeader}>
         <Text style={styles.ventaProducto}>{item.producto_nombre}</Text>
         <Text style={styles.ventaFecha}>
-          {new Date(item.fecha!).toLocaleDateString()}
+          {new Date(item.fecha!).toLocaleDateString("es-ES", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
         </Text>
       </View>
       <View style={styles.ventaDetalles}>
         <Text style={styles.ventaCantidad}>Cantidad: {item.cantidad}</Text>
-        <Text style={styles.ventaTotal}>
-          ${item.total_cup.toFixed(2)} CUP
-        </Text>
+        <Text style={styles.ventaTotal}>${item.total_cup.toFixed(2)} CUP</Text>
       </View>
-      <Text style={styles.ventaMoneda}>
-        Pagado en: {item.moneda_codigo}
-      </Text>
+      <Text style={styles.ventaMoneda}>Pagado en: {item.moneda_codigo}</Text>
     </Card>
   );
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>⚙️ Administración</Text>
-        
+        <View style={styles.headerTop}>
+          <Text style={styles.title}>⚙️ Administración</Text>
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={() => {
+              Alert.alert(
+                'Cerrar Sesión',
+                '¿Estás seguro de que quieres cerrar sesión?',
+                [
+                  { text: 'Cancelar', style: 'cancel' },
+                  { 
+                    text: 'Cerrar Sesión', 
+                    style: 'destructive',
+                    onPress: logout 
+                  }
+                ]
+              );
+            }}
+          >
+            <Ionicons name="log-out-outline" size={24} color={Colors.dark.error} />
+          </TouchableOpacity>
+        </View>
+
         {/* Resumen de ventas */}
         {resumenVentas && (
           <Card style={styles.resumenCard}>
             <Text style={styles.resumenTitulo}>Ventas de Hoy</Text>
             <View style={styles.resumenRow}>
               <View style={styles.resumenItem}>
-                <Text style={styles.resumenNumero}>{resumenVentas.total_ventas || 0}</Text>
+                <Text style={styles.resumenNumero}>
+                  {resumenVentas.total_ventas || 0}
+                </Text>
                 <Text style={styles.resumenLabel}>Ventas</Text>
               </View>
               <View style={styles.resumenItem}>
-                <Text style={styles.resumenNumero}>{resumenVentas.productos_vendidos || 0}</Text>
+                <Text style={styles.resumenNumero}>
+                  {resumenVentas.productos_vendidos || 0}
+                </Text>
                 <Text style={styles.resumenLabel}>Productos</Text>
               </View>
               <View style={styles.resumenItem}>
-                <Text style={styles.resumenNumero}>${(resumenVentas.total_ingresos || 0).toFixed(2)}</Text>
+                <Text style={styles.resumenNumero}>
+                  ${(resumenVentas.total_ingresos || 0).toFixed(2)}
+                </Text>
                 <Text style={styles.resumenLabel}>Ingresos CUP</Text>
               </View>
             </View>
@@ -232,25 +300,95 @@ export default function AdminScreen() {
         {/* Tabs */}
         <View style={styles.tabsContainer}>
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'productos' && styles.tabActive]}
-            onPress={() => setActiveTab('productos')}
+            style={[styles.tab, activeTab === "productos" && styles.tabActive]}
+            onPress={() => setActiveTab("productos")}
           >
-            <Text style={[styles.tabText, activeTab === 'productos' && styles.tabTextActive]}>
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === "productos" && styles.tabTextActive,
+              ]}
+            >
               Productos
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'ventas' && styles.tabActive]}
-            onPress={() => setActiveTab('ventas')}
+            style={[styles.tab, activeTab === "ventas" && styles.tabActive]}
+            onPress={() => setActiveTab("ventas")}
           >
-            <Text style={[styles.tabText, activeTab === 'ventas' && styles.tabTextActive]}>
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === "ventas" && styles.tabTextActive,
+              ]}
+            >
               Ventas
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* Botones de acción */}
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={styles.refreshButton}
+            onPress={() => cargarDatos()}
+          >
+            <Ionicons name="refresh" size={20} color={Colors.dark.primary} />
+            <Text style={styles.refreshText}>Actualizar</Text>
+          </TouchableOpacity>
+
+          {activeTab === "ventas" && (
+            <View style={styles.debugButtons}>
+              <TouchableOpacity
+                style={styles.testButton}
+                onPress={async () => {
+                  try {
+                    const testVentas = await databaseService.getVentas();
+                    Alert.alert(
+                      "Test DB",
+                      `Se encontraron ${testVentas.length} ventas en la base de datos`
+                    );
+                  } catch {
+                    Alert.alert(
+                      "Error DB",
+                      "Error al consultar la base de datos"
+                    );
+                  }
+                }}
+              >
+                <Ionicons name="bug" size={16} color={Colors.dark.secondary} />
+                <Text style={styles.testText}>Test DB</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={() => {
+                  Alert.alert(
+                    'Limpiar Cache',
+                    '¿Quieres limpiar el cache de autenticación? Esto te deslogueará.',
+                    [
+                      { text: 'Cancelar', style: 'cancel' },
+                      { 
+                        text: 'Limpiar', 
+                        style: 'destructive',
+                        onPress: async () => {
+                          await AuthService.clearAllAuthData();
+                          logout();
+                        }
+                      }
+                    ]
+                  );
+                }}
+              >
+                <Ionicons name="trash" size={16} color={Colors.dark.error} />
+                <Text style={styles.clearText}>Clear Cache</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       </View>
 
-      {activeTab === 'productos' && (
+      {activeTab === "productos" && (
         <>
           <View style={styles.actionBar}>
             <Button
@@ -271,13 +409,35 @@ export default function AdminScreen() {
         </>
       )}
 
-      {activeTab === 'ventas' && (
+      {activeTab === "ventas" && (
         <FlatList
           data={ventas}
           renderItem={renderVenta}
           keyExtractor={(item) => item.id!.toString()}
           contentContainerStyle={styles.lista}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => cargarDatos(true)}
+              tintColor={Colors.dark.primary}
+              colors={[Colors.dark.primary]}
+            />
+          }
+          ListEmptyComponent={() => (
+            <View style={styles.emptyState}>
+              <Ionicons
+                name="receipt-outline"
+                size={48}
+                color={Colors.dark.border}
+              />
+              <Text style={styles.emptyText}>No hay ventas registradas</Text>
+              <Text style={styles.emptySubtext}>
+                Las ventas aparecerán aquí cuando se registren desde la pestaña
+                de Ventas
+              </Text>
+            </View>
+          )}
         />
       )}
 
@@ -287,10 +447,10 @@ export default function AdminScreen() {
         animationType="slide"
         presentationStyle="pageSheet"
       >
-        <SafeAreaView style={styles.modalContainer} edges={['top']}>
+        <SafeAreaView style={styles.modalContainer} edges={["top"]}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>
-              {productoEditando ? 'Editar Producto' : 'Nuevo Producto'}
+              {productoEditando ? "Editar Producto" : "Nuevo Producto"}
             </Text>
             <TouchableOpacity onPress={() => setModalVisible(false)}>
               <Ionicons name="close" size={24} color={Colors.dark.text} />
@@ -299,7 +459,7 @@ export default function AdminScreen() {
 
           <KeyboardAvoidingView
             style={styles.modalKeyboardView}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
             keyboardVerticalOffset={0}
           >
             <ScrollView
@@ -315,7 +475,9 @@ export default function AdminScreen() {
                     <TextInput
                       style={styles.input}
                       value={formData.nombre}
-                      onChangeText={(text) => setFormData({ ...formData, nombre: text })}
+                      onChangeText={(text) =>
+                        setFormData({ ...formData, nombre: text })
+                      }
                       placeholder="Nombre del producto"
                       placeholderTextColor="#666"
                       editable={!loading}
@@ -328,7 +490,9 @@ export default function AdminScreen() {
                     <TextInput
                       style={styles.input}
                       value={formData.precio_cup}
-                      onChangeText={(text) => setFormData({ ...formData, precio_cup: text })}
+                      onChangeText={(text) =>
+                        setFormData({ ...formData, precio_cup: text })
+                      }
                       placeholder="0.00"
                       placeholderTextColor="#666"
                       keyboardType="numeric"
@@ -342,7 +506,9 @@ export default function AdminScreen() {
                     <TextInput
                       style={styles.input}
                       value={formData.stock}
-                      onChangeText={(text) => setFormData({ ...formData, stock: text })}
+                      onChangeText={(text) =>
+                        setFormData({ ...formData, stock: text })
+                      }
                       placeholder="0"
                       placeholderTextColor="#666"
                       keyboardType="numeric"
@@ -356,7 +522,9 @@ export default function AdminScreen() {
                     <TextInput
                       style={styles.input}
                       value={formData.categoria}
-                      onChangeText={(text) => setFormData({ ...formData, categoria: text })}
+                      onChangeText={(text) =>
+                        setFormData({ ...formData, categoria: text })
+                      }
                       placeholder="Ej: Bebidas, Snacks, etc."
                       placeholderTextColor="#666"
                       editable={!loading}
@@ -369,7 +537,9 @@ export default function AdminScreen() {
                     <TextInput
                       style={[styles.input, styles.inputMultiline]}
                       value={formData.descripcion}
-                      onChangeText={(text) => setFormData({ ...formData, descripcion: text })}
+                      onChangeText={(text) =>
+                        setFormData({ ...formData, descripcion: text })
+                      }
                       placeholder="Descripción del producto"
                       placeholderTextColor="#666"
                       multiline
@@ -380,7 +550,7 @@ export default function AdminScreen() {
                   </View>
 
                   <Button
-                    title={productoEditando ? 'Actualizar' : 'Crear'}
+                    title={productoEditando ? "Actualizar" : "Crear"}
                     onPress={guardarProducto}
                     loading={loading}
                     style={styles.guardarButton}
@@ -406,10 +576,20 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.dark.border,
   },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
   title: {
     ...Typography.h2,
     color: Colors.dark.text,
-    marginBottom: Spacing.lg,
+  },
+  logoutButton: {
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.dark.surfaceVariant,
   },
   resumenCard: {
     marginBottom: Spacing.lg,
@@ -418,26 +598,26 @@ const styles = StyleSheet.create({
     ...Typography.h3,
     color: Colors.dark.text,
     marginBottom: Spacing.md,
-    textAlign: 'center',
+    textAlign: "center",
   },
   resumenRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+    flexDirection: "row",
+    justifyContent: "space-around",
   },
   resumenItem: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   resumenNumero: {
     ...Typography.h2,
     color: Colors.dark.primary,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   resumenLabel: {
     ...Typography.caption,
     color: Colors.dark.secondary,
   },
   tabsContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     backgroundColor: Colors.dark.surfaceVariant,
     borderRadius: BorderRadius.md,
     padding: Spacing.xs,
@@ -445,7 +625,7 @@ const styles = StyleSheet.create({
   tab: {
     flex: 1,
     paddingVertical: Spacing.sm,
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: BorderRadius.sm,
   },
   tabActive: {
@@ -457,7 +637,53 @@ const styles = StyleSheet.create({
   },
   tabTextActive: {
     color: Colors.dark.primary,
-    fontWeight: '600',
+    fontWeight: "600",
+  },
+  actionButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: Spacing.md,
+  },
+  refreshButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    gap: Spacing.xs,
+  },
+  refreshText: {
+    ...Typography.caption,
+    color: Colors.dark.primary,
+    fontWeight: "600",
+  },
+  testButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    gap: Spacing.xs,
+  },
+  testText: {
+    ...Typography.caption,
+    color: Colors.dark.secondary,
+    fontWeight: "600",
+  },
+  debugButtons: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  clearButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    gap: Spacing.xs,
+  },
+  clearText: {
+    ...Typography.caption,
+    color: Colors.dark.error,
+    fontWeight: "600",
   },
   actionBar: {
     padding: Spacing.lg,
@@ -465,7 +691,7 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.dark.border,
   },
   nuevoButton: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
   },
   lista: {
     padding: Spacing.lg,
@@ -474,9 +700,9 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   productoHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
   },
   productoInfo: {
     flex: 1,
@@ -489,7 +715,7 @@ const styles = StyleSheet.create({
   productoPrecio: {
     ...Typography.body,
     color: Colors.dark.primary,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: Spacing.xs,
   },
   productoStock: {
@@ -504,7 +730,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.sm,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
   },
   productoDescripcion: {
     ...Typography.caption,
@@ -512,7 +738,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
   },
   productoAcciones: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: Spacing.sm,
   },
   accionButton: {
@@ -524,9 +750,9 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   ventaHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: Spacing.sm,
   },
   ventaProducto: {
@@ -539,9 +765,9 @@ const styles = StyleSheet.create({
     color: Colors.dark.secondary,
   },
   ventaDetalles: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: Spacing.xs,
   },
   ventaCantidad: {
@@ -551,7 +777,7 @@ const styles = StyleSheet.create({
   ventaTotal: {
     ...Typography.body,
     color: Colors.dark.primary,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   ventaMoneda: {
     ...Typography.caption,
@@ -562,9 +788,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.dark.background,
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: Spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: Colors.dark.border,
@@ -588,7 +814,7 @@ const styles = StyleSheet.create({
   inputLabel: {
     ...Typography.body,
     color: Colors.dark.text,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: Spacing.xs,
   },
   input: {
@@ -608,5 +834,23 @@ const styles = StyleSheet.create({
   guardarButton: {
     marginTop: Spacing.md,
     marginBottom: Spacing.xl,
+  },
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: Spacing.xxl,
+    paddingHorizontal: Spacing.lg,
+  },
+  emptyText: {
+    ...Typography.body,
+    color: Colors.dark.secondary,
+    marginTop: Spacing.md,
+    textAlign: "center",
+  },
+  emptySubtext: {
+    ...Typography.caption,
+    color: Colors.dark.secondary,
+    marginTop: Spacing.sm,
+    textAlign: "center",
+    opacity: 0.7,
   },
 });

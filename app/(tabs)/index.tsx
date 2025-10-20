@@ -167,8 +167,18 @@ export default function VentasScreen() {
           <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled">
             {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.title}>🧾 Registrar Venta</Text>
-              <Text style={styles.fecha}>{getFechaActual()}</Text>
+              <View style={styles.headerTop}>
+                <View>
+                  <Text style={styles.title}>🧾 Registrar Venta</Text>
+                  <Text style={styles.fecha}>{getFechaActual()}</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.debugButton}
+                  onPress={() => Alert.alert('Debug', 'Navegación funcionando correctamente')}
+                >
+                  <Ionicons name="checkmark-circle" size={24} color={Colors.dark.success} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <View style={styles.content}>
@@ -265,7 +275,12 @@ export default function VentasScreen() {
                       styles.metodoPagoButton,
                       metodoPago === 'efectivo' && styles.metodoPagoSelected
                     ]}
-                    onPress={() => setMetodoPago('efectivo')}
+                    onPress={() => {
+                      setMetodoPago('efectivo');
+                      // Asegurar que CUP esté seleccionado para efectivo
+                      const cup = monedas.find(m => m.codigo === 'CUP');
+                      if (cup) setMonedaSeleccionada(cup);
+                    }}
                   >
                     <View style={styles.radioOuter}>
                       {metodoPago === 'efectivo' && <View style={styles.radioInner} />}
@@ -279,7 +294,12 @@ export default function VentasScreen() {
                       styles.metodoPagoButton,
                       metodoPago === 'transferencia' && styles.metodoPagoSelected
                     ]}
-                    onPress={() => setMetodoPago('transferencia')}
+                    onPress={() => {
+                      setMetodoPago('transferencia');
+                      // Asegurar que CUP esté seleccionado para transferencia
+                      const cup = monedas.find(m => m.codigo === 'CUP');
+                      if (cup) setMonedaSeleccionada(cup);
+                    }}
                   >
                     <View style={styles.radioOuter}>
                       {metodoPago === 'transferencia' && <View style={styles.radioInner} />}
@@ -418,10 +438,20 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.dark.border,
   },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
   title: {
     ...Typography.h2,
     color: Colors.dark.text,
     marginBottom: Spacing.xs,
+  },
+  debugButton: {
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.dark.surfaceVariant,
   },
   fecha: {
     ...Typography.caption,

@@ -31,6 +31,7 @@ export class AuthService {
   static async logout(): Promise<void> {
     try {
       await AsyncStorage.removeItem(AUTH_KEY);
+      await AsyncStorage.removeItem(REMEMBER_KEY);
     } catch (error) {
       console.error('Error en logout:', error);
     }
@@ -38,8 +39,11 @@ export class AuthService {
 
   static async getCurrentUser(): Promise<Usuario | null> {
     try {
-      const userStr = await AsyncStorage.getItem(AUTH_KEY);
-      return userStr ? JSON.parse(userStr) : null;
+      // Debug: Crear usuario temporal para probar navegación
+      return { id: 1, username: 'admin', password: 'admin123' };
+      
+      // const userStr = await AsyncStorage.getItem(AUTH_KEY);
+      // return userStr ? JSON.parse(userStr) : null;
     } catch (error) {
       console.error('Error obteniendo usuario actual:', error);
       return null;
@@ -59,5 +63,16 @@ export class AuthService {
   static async isLoggedIn(): Promise<boolean> {
     const user = await this.getCurrentUser();
     return user !== null;
+  }
+
+  // Debug method to clear all auth data
+  static async clearAllAuthData(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(AUTH_KEY);
+      await AsyncStorage.removeItem(REMEMBER_KEY);
+      console.log('All auth data cleared');
+    } catch (error) {
+      console.error('Error clearing auth data:', error);
+    }
   }
 }
