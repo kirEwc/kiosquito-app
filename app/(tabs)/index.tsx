@@ -298,7 +298,7 @@ export default function VentasScreen() {
                     <Text style={styles.metodoPagoText}>Transferencia</Text>
                   </TouchableOpacity>
 
-                  {monedas.filter(m => m.codigo !== 'CUP' && m.activa).length > 0 && (
+                  {monedas.filter(m => m.codigo !== 'CUP').length > 0 && (
                     <TouchableOpacity
                       style={[
                         styles.metodoPagoButton,
@@ -317,7 +317,7 @@ export default function VentasScreen() {
                   {/* Selector de Moneda */}
                   {metodoPago === 'otra_moneda' && (
                     <View style={styles.monedasContainer}>
-                      {monedas.filter(m => m.activa).map((moneda) => (
+                      {monedas.map((moneda) => (
                         <TouchableOpacity
                           key={moneda.id}
                           style={[

@@ -38,7 +38,7 @@ export default function MonedasScreen() {
 
   const cargarMonedas = async () => {
     try {
-      const monedasData = await databaseService.getMonedas();
+      const monedasData = await databaseService.getAllMonedas();
       setMonedas(monedasData);
     } catch (error) {
       console.error('Error cargando monedas:', error);
@@ -83,13 +83,21 @@ export default function MonedasScreen() {
       return;
     }
 
+    // Validar que el código no exista ya (solo para nuevas monedas)
+    if (!monedaEditando) {
+      const monedaExistente = monedas.find(m => m.codigo.toUpperCase() === formData.codigo.toUpperCase().trim());
+      if (monedaExistente) {
+        Alert.alert('Error', `Ya existe una moneda con el código "${formData.codigo.toUpperCase()}"`);
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const monedaData = {
         codigo: formData.codigo.toUpperCase().trim(),
         nombre: formData.nombre.trim(),
         tasa_cambio: tasa,
-        activa: true,
       };
 
       if (monedaEditando) {
@@ -102,27 +110,47 @@ export default function MonedasScreen() {
 
       setModalVisible(false);
       cargarMonedas();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error guardando moneda:', error);
-      Alert.alert('Error', 'No se pudo guardar la moneda');
+      
+      // Detectar error de código duplicado
+      if (error?.message?.includes('UNIQUE constraint failed: monedas.codigo')) {
+        Alert.alert('Error', `Ya existe una moneda con el código "${formData.codigo.toUpperCase()}"`);
+      } else {
+        Alert.alert('Error', 'No se pudo guardar la moneda. Verifica que todos los datos sean correctos.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleMoneda = async (moneda: Moneda) => {
+  const eliminarMoneda = (moneda: Moneda) => {
     if (moneda.codigo === 'CUP') {
-      Alert.alert('Error', 'No se puede desactivar la moneda CUP');
+      Alert.alert('Error', 'No se puede eliminar la moneda CUP');
       return;
     }
 
-    try {
-      await databaseService.updateMoneda(moneda.id!, { activa: !moneda.activa });
-      cargarMonedas();
-    } catch (error) {
-      console.error('Error actualizando moneda:', error);
-      Alert.alert('Error', 'No se pudo actualizar la moneda');
-    }
+    Alert.alert(
+      'Confirmar eliminación',
+      `¿Estás seguro de que quieres eliminar "${moneda.codigo} - ${moneda.nombre}"?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await databaseService.deleteMoneda(moneda.id!);
+              Alert.alert('Éxito', 'Moneda eliminada correctamente');
+              cargarMonedas();
+            } catch (error) {
+              console.error('Error eliminando moneda:', error);
+              Alert.alert('Error', 'No se pudo eliminar la moneda');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const calcularEquivalencia = (moneda: Moneda, cantidad: number = 100) => {
@@ -149,29 +177,20 @@ export default function MonedasScreen() {
         </View>
         
         <View style={styles.monedaAcciones}>
+          <TouchableOpacity
+            style={styles.accionButton}
+            onPress={() => abrirModal(item)}
+          >
+            <Ionicons name="pencil" size={20} color={Colors.dark.primary} />
+          </TouchableOpacity>
+          
           {item.codigo !== 'CUP' && (
-            <>
-              <TouchableOpacity
-                style={styles.accionButton}
-                onPress={() => abrirModal(item)}
-              >
-                <Ionicons name="pencil" size={20} color={Colors.dark.primary} />
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[
-                  styles.accionButton,
-                  { backgroundColor: item.activa ? Colors.dark.error : Colors.dark.success }
-                ]}
-                onPress={() => toggleMoneda(item)}
-              >
-                <Ionicons 
-                  name={item.activa ? "pause" : "play"} 
-                  size={20} 
-                  color={Colors.dark.surface} 
-                />
-              </TouchableOpacity>
-            </>
+            <TouchableOpacity
+              style={[styles.accionButton, styles.deleteButton]}
+              onPress={() => eliminarMoneda(item)}
+            >
+              <Ionicons name="trash" size={20} color={Colors.dark.surface} />
+            </TouchableOpacity>
           )}
         </View>
       </View>
@@ -191,11 +210,7 @@ export default function MonedasScreen() {
         </View>
       </View>
 
-      {!item.activa && (
-        <View style={styles.inactivaBadge}>
-          <Text style={styles.inactivaText}>Moneda Inactiva</Text>
-        </View>
-      )}
+
     </Card>
   );
 
@@ -257,7 +272,10 @@ export default function MonedasScreen() {
                   <View style={styles.inputContainer}>
                     <Text style={styles.inputLabel}>Código de Moneda *</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[
+                        styles.input,
+                        !monedaEditando && monedas.some(m => m.codigo.toUpperCase() === formData.codigo.toUpperCase().trim()) && formData.codigo.trim() !== '' && styles.inputError
+                      ]}
                       value={formData.codigo}
                       onChangeText={(text) => setFormData({ ...formData, codigo: text.toUpperCase() })}
                       placeholder="USD, EUR, MLC, etc."
@@ -266,6 +284,11 @@ export default function MonedasScreen() {
                       autoCapitalize="characters"
                       editable={!monedaEditando || monedaEditando.codigo !== 'CUP'}
                     />
+                    {!monedaEditando && monedas.some(m => m.codigo.toUpperCase() === formData.codigo.toUpperCase().trim()) && formData.codigo.trim() !== '' && (
+                      <Text style={styles.errorText}>
+                        ⚠️ Ya existe una moneda con este código
+                      </Text>
+                    )}
                   </View>
 
                   {/* Nombre */}
@@ -405,6 +428,9 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.sm,
     backgroundColor: Colors.dark.surfaceVariant,
   },
+  deleteButton: {
+    backgroundColor: Colors.dark.error,
+  },
   equivalencias: {
     backgroundColor: Colors.dark.surfaceVariant,
     padding: Spacing.md,
@@ -424,17 +450,7 @@ const styles = StyleSheet.create({
     ...Typography.small,
     color: Colors.dark.secondary,
   },
-  inactivaBadge: {
-    backgroundColor: Colors.dark.error,
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.md,
-    alignItems: 'center',
-  },
-  inactivaText: {
-    ...Typography.caption,
-    color: Colors.dark.surface,
-    fontWeight: '600',
-  },
+
   modalContainer: {
     flex: 1,
     backgroundColor: Colors.dark.background,
@@ -478,6 +494,15 @@ const styles = StyleSheet.create({
     color: Colors.dark.text,
     borderWidth: 1,
     borderColor: Colors.dark.border,
+  },
+  inputError: {
+    borderColor: Colors.dark.error,
+    borderWidth: 2,
+  },
+  errorText: {
+    ...Typography.caption,
+    color: Colors.dark.error,
+    marginTop: Spacing.xs,
   },
   infoCard: {
     backgroundColor: Colors.dark.surfaceVariant,

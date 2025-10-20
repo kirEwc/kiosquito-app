@@ -294,7 +294,16 @@ class DatabaseService {
     if (!this.db) return [];
 
     const monedas = (await this.db.getAllAsync(
-      "SELECT * FROM monedas WHERE activa = 1 ORDER BY codigo"
+      "SELECT * FROM monedas ORDER BY codigo"
+    )) as Moneda[];
+    return monedas;
+  }
+
+  async getAllMonedas(): Promise<Moneda[]> {
+    if (!this.db) return [];
+
+    const monedas = (await this.db.getAllAsync(
+      "SELECT * FROM monedas ORDER BY CASE WHEN codigo = 'CUP' THEN 0 ELSE 1 END, codigo"
     )) as Moneda[];
     return monedas;
   }
@@ -304,7 +313,7 @@ class DatabaseService {
 
     const result = await this.db.runAsync(
       "INSERT INTO monedas (codigo, nombre, tasa_cambio, activa) VALUES (?, ?, ?, ?)",
-      [moneda.codigo, moneda.nombre, moneda.tasa_cambio, moneda.activa ? 1 : 0]
+      [moneda.codigo, moneda.nombre, moneda.tasa_cambio, 1] // Siempre activa por defecto
     );
 
     return result.lastInsertRowId;
@@ -324,6 +333,11 @@ class DatabaseService {
       ...values,
       id,
     ]);
+  }
+
+  async deleteMoneda(id: number): Promise<void> {
+    if (!this.db) throw new Error("Base de datos no inicializada");
+    await this.db.runAsync("DELETE FROM monedas WHERE id = ?", [id]);
   }
 
   // Métodos para ventas
