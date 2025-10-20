@@ -1,35 +1,62 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
+import { Ionicons } from '@expo/vector-icons';
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { HapticTab } from '../../components/haptic-tab';
+import { Colors } from '../../constants/theme';
+import { AuthGuard } from '../../components/AuthGuard';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
-        }}
-      />
-    </Tabs>
+    <AuthGuard>
+      <Tabs
+        screenOptions={{
+          tabBarActiveTintColor: Colors.dark.tint,
+          tabBarInactiveTintColor: Colors.dark.tabIconDefault,
+          headerShown: false,
+          tabBarButton: HapticTab,
+          tabBarStyle: {
+            backgroundColor: Colors.dark.surface,
+            borderTopColor: Colors.dark.border,
+          },
+        }}>
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: 'Ventas',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="storefront" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="admin"
+          options={{
+            title: 'Administración',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="settings" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="monedas"
+          options={{
+            title: 'Monedas',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="cash" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="perfil"
+          options={{
+            title: 'Perfil',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="person" size={size} color={color} />
+            ),
+          }}
+        />
+      </Tabs>
+    </AuthGuard>
   );
 }

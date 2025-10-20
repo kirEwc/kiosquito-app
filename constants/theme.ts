@@ -5,25 +5,93 @@
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+const tintColorLight = '#2563eb';
+const tintColorDark = '#60a5fa';
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
+    text: '#1f2937',
+    background: '#ffffff',
     tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
+    icon: '#6b7280',
+    tabIconDefault: '#9ca3af',
     tabIconSelected: tintColorLight,
+    card: '#f9fafb',
+    border: '#e5e7eb',
+    primary: '#2563eb',
+    secondary: '#64748b',
+    success: '#10b981',
+    warning: '#f59e0b',
+    error: '#ef4444',
+    surface: '#ffffff',
+    surfaceVariant: '#f1f5f9',
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
+    text: '#f9fafb',
+    background: '#111827',
     tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
+    icon: '#9ca3af',
+    tabIconDefault: '#6b7280',
     tabIconSelected: tintColorDark,
+    card: '#1f2937',
+    border: '#374151',
+    primary: '#60a5fa',
+    secondary: '#94a3b8',
+    success: '#34d399',
+    warning: '#fbbf24',
+    error: '#f87171',
+    surface: '#1f2937',
+    surfaceVariant: '#374151',
+  },
+};
+
+export const Spacing = {
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
+  xxl: 48,
+};
+
+export const BorderRadius = {
+  sm: 4,
+  md: 8,
+  lg: 12,
+  xl: 16,
+  full: 9999,
+};
+
+export const Typography = {
+  h1: {
+    fontSize: 32,
+    fontWeight: 'bold' as const,
+    lineHeight: 40,
+  },
+  h2: {
+    fontSize: 24,
+    fontWeight: 'bold' as const,
+    lineHeight: 32,
+  },
+  h3: {
+    fontSize: 20,
+    fontWeight: '600' as const,
+    lineHeight: 28,
+  },
+  body: {
+    fontSize: 16,
+    fontWeight: 'normal' as const,
+    lineHeight: 24,
+  },
+  caption: {
+    fontSize: 14,
+    fontWeight: 'normal' as const,
+    lineHeight: 20,
+  },
+  small: {
+    fontSize: 12,
+    fontWeight: 'normal' as const,
+    lineHeight: 16,
   },
 };
 
