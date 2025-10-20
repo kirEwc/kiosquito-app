@@ -39,11 +39,8 @@ export class AuthService {
 
   static async getCurrentUser(): Promise<Usuario | null> {
     try {
-      // Debug: Crear usuario temporal para probar navegación
-      return { id: 1, username: 'admin', password: 'admin123' };
-      
-      // const userStr = await AsyncStorage.getItem(AUTH_KEY);
-      // return userStr ? JSON.parse(userStr) : null;
+      const userStr = await AsyncStorage.getItem(AUTH_KEY);
+      return userStr ? JSON.parse(userStr) : null;
     } catch (error) {
       console.error('Error obteniendo usuario actual:', error);
       return null;

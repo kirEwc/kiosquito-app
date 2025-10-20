@@ -21,7 +21,6 @@ import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { databaseService, Producto, Venta } from "../../services/database";
 import { useAuth } from "../../contexts/AuthContext";
-import { AuthService } from "../../services/auth";
 import {
   Colors,
   Spacing,
@@ -337,54 +336,7 @@ export default function AdminScreen() {
             <Text style={styles.refreshText}>Actualizar</Text>
           </TouchableOpacity>
 
-          {activeTab === "ventas" && (
-            <View style={styles.debugButtons}>
-              <TouchableOpacity
-                style={styles.testButton}
-                onPress={async () => {
-                  try {
-                    const testVentas = await databaseService.getVentas();
-                    Alert.alert(
-                      "Test DB",
-                      `Se encontraron ${testVentas.length} ventas en la base de datos`
-                    );
-                  } catch {
-                    Alert.alert(
-                      "Error DB",
-                      "Error al consultar la base de datos"
-                    );
-                  }
-                }}
-              >
-                <Ionicons name="bug" size={16} color={Colors.dark.secondary} />
-                <Text style={styles.testText}>Test DB</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={styles.clearButton}
-                onPress={() => {
-                  Alert.alert(
-                    'Limpiar Cache',
-                    '¿Quieres limpiar el cache de autenticación? Esto te deslogueará.',
-                    [
-                      { text: 'Cancelar', style: 'cancel' },
-                      { 
-                        text: 'Limpiar', 
-                        style: 'destructive',
-                        onPress: async () => {
-                          await AuthService.clearAllAuthData();
-                          logout();
-                        }
-                      }
-                    ]
-                  );
-                }}
-              >
-                <Ionicons name="trash" size={16} color={Colors.dark.error} />
-                <Text style={styles.clearText}>Clear Cache</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+
         </View>
       </View>
 
@@ -664,27 +616,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     gap: Spacing.xs,
   },
-  testText: {
-    ...Typography.caption,
-    color: Colors.dark.secondary,
-    fontWeight: "600",
-  },
-  debugButtons: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  clearButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    gap: Spacing.xs,
-  },
-  clearText: {
-    ...Typography.caption,
-    color: Colors.dark.error,
-    fontWeight: "600",
-  },
+
   actionBar: {
     padding: Spacing.lg,
     borderBottomWidth: 1,

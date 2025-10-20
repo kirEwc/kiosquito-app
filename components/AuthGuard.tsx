@@ -11,12 +11,8 @@ interface AuthGuardProps {
 export function AuthGuard({ children }: AuthGuardProps) {
   const { user, isLoading } = useAuth();
 
-  // Debug: Log para ver el estado
-  console.log('AuthGuard - isLoading:', isLoading, 'user:', !!user);
-
   useEffect(() => {
     if (!isLoading && !user) {
-      console.log('AuthGuard - Redirecting to login');
       router.replace('/login');
     }
   }, [user, isLoading]);

@@ -167,18 +167,8 @@ export default function VentasScreen() {
           <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled">
             {/* Header */}
             <View style={styles.header}>
-              <View style={styles.headerTop}>
-                <View>
-                  <Text style={styles.title}>🧾 Registrar Venta</Text>
-                  <Text style={styles.fecha}>{getFechaActual()}</Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.debugButton}
-                  onPress={() => Alert.alert('Debug', 'Navegación funcionando correctamente')}
-                >
-                  <Ionicons name="checkmark-circle" size={24} color={Colors.dark.success} />
-                </TouchableOpacity>
-              </View>
+              <Text style={styles.title}>🧾 Registrar Venta</Text>
+              <Text style={styles.fecha}>{getFechaActual()}</Text>
             </View>
 
             <View style={styles.content}>
@@ -438,20 +428,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.dark.border,
   },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
   title: {
     ...Typography.h2,
     color: Colors.dark.text,
     marginBottom: Spacing.xs,
-  },
-  debugButton: {
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.sm,
-    backgroundColor: Colors.dark.surfaceVariant,
   },
   fecha: {
     ...Typography.caption,

@@ -4,8 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { AuthGuard } from '../../components/AuthGuard';
 
 export default function TabLayout() {
-  console.log('TabLayout rendering...'); // Debug log
-  
   return (
     <AuthGuard>
       <Tabs
@@ -34,11 +32,20 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="test-nav"
+          name="monedas"
           options={{
-            title: 'Test',
+            title: 'Monedas',
             tabBarIcon: ({ color }) => (
-              <Ionicons name="flask" size={24} color={color} />
+              <Ionicons name="logo-usd" size={24} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="perfil"
+          options={{
+            title: 'Perfil',
+            tabBarIcon: ({ color }) => (
+              <Ionicons name="person" size={24} color={color} />
             ),
           }}
         />
