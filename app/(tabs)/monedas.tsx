@@ -171,9 +171,7 @@ export default function MonedasScreen() {
             )}
           </View>
           <Text style={styles.monedaNombre}>{item.nombre}</Text>
-          <Text style={styles.monedaTasa}>
-            Tasa: {item.tasa_cambio}x respecto al CUP
-          </Text>
+         
         </View>
         
         <View style={styles.monedaAcciones}>
@@ -196,21 +194,17 @@ export default function MonedasScreen() {
       </View>
 
       {/* Equivalencias */}
+       {item.codigo !== 'CUP' && (
       <View style={styles.equivalencias}>
         <Text style={styles.equivalenciasTitulo}>Equivalencias:</Text>
-        <View style={styles.equivalenciaRow}>
-          <Text style={styles.equivalenciaText}>
-            100 CUP = {calcularEquivalencia(item)} {item.codigo}
-          </Text>
-        </View>
+        
         <View style={styles.equivalenciaRow}>
           <Text style={styles.equivalenciaText}>
             1 {item.codigo} = {item.tasa_cambio} CUP
           </Text>
         </View>
       </View>
-
-
+       )}
     </Card>
   );
 

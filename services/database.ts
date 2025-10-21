@@ -22,7 +22,7 @@ export interface Moneda {
   codigo: string;
   nombre: string;
   tasa_cambio: number; // Respecto al CUP
-  activa: boolean;
+  activa?: boolean; // Opcional, por defecto true
 }
 
 export interface Venta {
@@ -152,84 +152,67 @@ class DatabaseService {
       );
     }
 
-    // Productos de ejemplo
+    // No insertar productos de ejemplo automáticamente
+    // Los productos deben ser creados manualmente por el usuario
+    
+    // Limpiar productos de ejemplo si existen (solo una vez)
+    await this.cleanExampleProducts();
+  }
+
+  private async cleanExampleProducts() {
+    if (!this.db) return;
+
+    // Lista de productos de ejemplo que deben ser eliminados
     const productosEjemplo = [
-      {
-        nombre: "Coca Cola 355ml",
-        precio: 150,
-        stock: 50,
-        descripcion: "Refresco de cola",
-        categoria: "Bebidas",
-      },
-      {
-        nombre: "Agua Mineral 500ml",
-        precio: 50,
-        stock: 100,
-        descripcion: "Agua natural",
-        categoria: "Bebidas",
-      },
-      {
-        nombre: "Papas Fritas",
-        precio: 80,
-        stock: 30,
-        descripcion: "Snack salado",
-        categoria: "Snacks",
-      },
-      {
-        nombre: "Chocolate",
-        precio: 120,
-        stock: 25,
-        descripcion: "Chocolate con leche",
-        categoria: "Dulces",
-      },
-      {
-        nombre: "Pan Tostado",
-        precio: 60,
-        stock: 40,
-        descripcion: "Pan para desayuno",
-        categoria: "Panadería",
-      },
-      {
-        nombre: "Café Instantáneo",
-        precio: 200,
-        stock: 15,
-        descripcion: "Café soluble",
-        categoria: "Bebidas",
-      },
-      {
-        nombre: "Galletas María",
-        precio: 90,
-        stock: 35,
-        descripcion: "Galletas dulces",
-        categoria: "Dulces",
-      },
-      {
-        nombre: "Jugo de Naranja",
-        precio: 100,
-        stock: 20,
-        descripcion: "Jugo natural",
-        categoria: "Bebidas",
-      },
+      "Coca Cola 355ml",
+      "Agua Mineral 500ml", 
+      "Papas Fritas",
+      "Chocolate",
+      "Pan Tostado",
+      "Café Instantáneo",
+      "Galletas María",
+      "Jugo de Naranja"
     ];
 
-    for (const producto of productosEjemplo) {
-      const exists = await this.db.getFirstAsync(
-        "SELECT id FROM productos WHERE nombre = ?",
-        [producto.nombre]
-      );
-      if (!exists) {
+    // Verificar si existe una marca de que ya se limpiaron
+    const cleanupDone = await this.db.getFirstAsync(
+      "SELECT id FROM usuarios WHERE username = ?",
+      ["__cleanup_done__"]
+    );
+
+    if (!cleanupDone) {
+      // Eliminar productos de ejemplo
+      for (const nombreProducto of productosEjemplo) {
         await this.db.runAsync(
-          "INSERT INTO productos (nombre, precio_cup, stock, descripcion, categoria) VALUES (?, ?, ?, ?, ?)",
-          [
-            producto.nombre,
-            producto.precio,
-            producto.stock,
-            producto.descripcion,
-            producto.categoria,
-          ]
+          "DELETE FROM productos WHERE nombre = ?",
+          [nombreProducto]
         );
       }
+
+      // Marcar que la limpieza ya se hizo
+      await this.db.runAsync(
+        "INSERT INTO usuarios (username, password) VALUES (?, ?)",
+        ["__cleanup_done__", "cleanup"]
+      );
     }
+  }
+
+  // Método para verificar si hay datos iniciales
+  async hasInitialData(): Promise<{ productos: number; monedas: number }> {
+    if (!this.db) return { productos: 0, monedas: 0 };
+
+    const productosCount = await this.db.getFirstAsync(
+      "SELECT COUNT(*) as count FROM productos"
+    ) as { count: number };
+
+    const monedasCount = await this.db.getFirstAsync(
+      "SELECT COUNT(*) as count FROM monedas"
+    ) as { count: number };
+
+    return {
+      productos: productosCount.count,
+      monedas: monedasCount.count
+    };
   }
 
   // Métodos para usuarios
@@ -275,7 +258,10 @@ class DatabaseService {
     if (!this.db) throw new Error("Base de datos no inicializada");
 
     const fields = Object.keys(producto).filter((key) => key !== "id");
-    const values = fields.map((key) => producto[key as keyof Producto]);
+    const values = fields.map((key) => {
+      const value = producto[key as keyof Producto];
+      return value !== undefined ? value : null;
+    });
     const setClause = fields.map((field) => `${field} = ?`).join(", ");
 
     await this.db.runAsync(`UPDATE productos SET ${setClause} WHERE id = ?`, [
@@ -313,7 +299,7 @@ class DatabaseService {
 
     const result = await this.db.runAsync(
       "INSERT INTO monedas (codigo, nombre, tasa_cambio, activa) VALUES (?, ?, ?, ?)",
-      [moneda.codigo, moneda.nombre, moneda.tasa_cambio, 1] // Siempre activa por defecto
+      [moneda.codigo, moneda.nombre, moneda.tasa_cambio, moneda.activa !== false ? 1 : 0]
     );
 
     return result.lastInsertRowId;
@@ -325,7 +311,10 @@ class DatabaseService {
     const fields = Object.keys(moneda).filter((key) => key !== "id");
     const values = fields.map((key) => {
       const value = moneda[key as keyof Moneda];
-      return key === "activa" ? (value ? 1 : 0) : value;
+      if (key === "activa") {
+        return value ? 1 : 0;
+      }
+      return value !== undefined ? value : null;
     });
     const setClause = fields.map((field) => `${field} = ?`).join(", ");
 
@@ -343,6 +332,30 @@ class DatabaseService {
   // Métodos para ventas
   async createVenta(venta: Omit<Venta, "id" | "fecha">): Promise<number> {
     if (!this.db) throw new Error("Base de datos no inicializada");
+
+    // Validar que el producto existe y tiene suficiente stock
+    const producto = await this.db.getFirstAsync(
+      "SELECT stock FROM productos WHERE id = ?",
+      [venta.producto_id]
+    ) as { stock: number } | null;
+
+    if (!producto) {
+      throw new Error("El producto no existe");
+    }
+
+    if (producto.stock < venta.cantidad) {
+      throw new Error("Stock insuficiente");
+    }
+
+    // Validar que la moneda existe
+    const moneda = await this.db.getFirstAsync(
+      "SELECT id FROM monedas WHERE id = ?",
+      [venta.moneda_id]
+    );
+
+    if (!moneda) {
+      throw new Error("La moneda no existe");
+    }
 
     // Actualizar stock del producto
     await this.db.runAsync(
@@ -369,10 +382,12 @@ class DatabaseService {
     if (!this.db) return [];
 
     let query = `
-      SELECT v.*, p.nombre as producto_nombre, m.codigo as moneda_codigo
+      SELECT v.*, 
+             COALESCE(p.nombre, 'Producto eliminado') as producto_nombre, 
+             COALESCE(m.codigo, 'Moneda eliminada') as moneda_codigo
       FROM ventas v
-      JOIN productos p ON v.producto_id = p.id
-      JOIN monedas m ON v.moneda_id = m.id
+      LEFT JOIN productos p ON v.producto_id = p.id
+      LEFT JOIN monedas m ON v.moneda_id = m.id
     `;
 
     const params: any[] = [];

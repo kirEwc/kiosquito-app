@@ -168,19 +168,6 @@ export default function VentasScreen() {
             style={styles.nuevaVentaButton}
           />
         </Card>
-
-        {/* Estadísticas rápidas */}
-        <View style={styles.statsContainer}>
-          <Card style={styles.statCard}>
-            <Text style={styles.statNumber}>{productos.length}</Text>
-            <Text style={styles.statLabel}>Productos Disponibles</Text>
-          </Card>
-          
-          <Card style={styles.statCard}>
-            <Text style={styles.statNumber}>{monedas.length}</Text>
-            <Text style={styles.statLabel}>Monedas Activas</Text>
-          </Card>
-        </View>
       </View>
 
       {/* Modal de Registrar Venta */}
