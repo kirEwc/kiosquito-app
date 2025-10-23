@@ -5,17 +5,15 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
-  TouchableOpacity,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
 import { databaseService } from '../../services/database';
-import { Colors, Spacing, Typography, BorderRadius } from '../../constants/theme';
+import { Colors, Spacing, Typography } from '../../constants/theme';
 
 export default function PerfilScreen() {
   const { user, logout } = useAuth();
@@ -74,29 +72,6 @@ export default function PerfilScreen() {
     );
   };
 
-  const menuItems = [
-    {
-      icon: 'cart',
-      title: 'Ir a Ventas',
-      subtitle: 'Registrar nuevas ventas',
-      color: Colors.dark.primary,
-      onPress: () => router.push('/(tabs)'),
-    },
-    {
-      icon: 'cube',
-      title: 'Productos',
-      subtitle: 'Gestionar inventario y precios',
-      color: Colors.dark.success,
-      onPress: () => router.push('/(tabs)/admin'),
-    },
-    {
-      icon: 'cash',
-      title: 'Monedas y Tasas',
-      subtitle: 'Configurar monedas y tasas de cambio',
-      color: '#f59e0b',
-      onPress: () => router.push('/(tabs)/monedas'),
-    },
-  ];
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -120,106 +95,7 @@ export default function PerfilScreen() {
           <Text style={styles.userRole}>Administrador del Sistema</Text>
         </View>
 
-        {/* Estadísticas rápidas */}
-        {estadisticas && (
-          <Card style={styles.statsCard}>
-            <Text style={styles.sectionTitle}>📊 Resumen de Actividad</Text>
-            
-            <View style={styles.statsGrid}>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{estadisticas.dia?.total_ventas || 0}</Text>
-                <Text style={styles.statLabel}>Ventas Hoy</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{estadisticas.semana?.total_ventas || 0}</Text>
-                <Text style={styles.statLabel}>Esta Semana</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{estadisticas.mes?.total_ventas || 0}</Text>
-                <Text style={styles.statLabel}>Este Mes</Text>
-              </View>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.statsRow}>
-              <View style={styles.statItemLarge}>
-                <Text style={styles.statNumberLarge}>
-                  ${(estadisticas.mes?.total_ingresos || 0).toFixed(2)}
-                </Text>
-                <Text style={styles.statLabel}>Ingresos del Mes (CUP)</Text>
-              </View>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.statsGrid}>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{estadisticas.totalProductos}</Text>
-                <Text style={styles.statLabel}>Productos</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{estadisticas.totalMonedas}</Text>
-                <Text style={styles.statLabel}>Monedas</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={[
-                  styles.statNumber,
-                  { color: estadisticas.stockBajo > 0 ? Colors.dark.error : Colors.dark.success }
-                ]}>
-                  {estadisticas.stockBajo}
-                </Text>
-                <Text style={styles.statLabel}>Stock Bajo</Text>
-              </View>
-            </View>
-          </Card>
-        )}
-
-        {/* Accesos rápidos */}
-        <Card style={styles.menuCard}>
-          <Text style={styles.sectionTitle}>🚀 Accesos Rápidos</Text>
-          
-          {menuItems.map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              style={[
-                styles.menuItem,
-                index === menuItems.length - 1 && styles.menuItemLast
-              ]}
-              onPress={item.onPress}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.menuIcon, { backgroundColor: item.color + '20' }]}>
-                <Ionicons name={item.icon as any} size={24} color={item.color} />
-              </View>
-              <View style={styles.menuContent}>
-                <Text style={styles.menuTitle}>{item.title}</Text>
-                <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={Colors.dark.icon} />
-            </TouchableOpacity>
-          ))}
-        </Card>
-
-        {/* Información de la app */}
-        <Card style={styles.infoCard}>
-          <Text style={styles.sectionTitle}>ℹ️ Información del Sistema</Text>
-          
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Aplicación:</Text>
-            <Text style={styles.infoValue}>Kiosquito v1.0</Text>
-          </View>
-          
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Base de Datos:</Text>
-            <Text style={styles.infoValue}>SQLite Local</Text>
-          </View>
-          
-          <View style={[styles.infoRow, styles.infoRowLast]}>
-            <Text style={styles.infoLabel}>Moneda Principal:</Text>
-            <Text style={styles.infoValue}>CUP (Peso Cubano)</Text>
-          </View>
-        </Card>
+        {/* cambiar de contraseña */}
 
         {/* Botón de cerrar sesión */}
         <View style={styles.logoutContainer}>
@@ -248,8 +124,8 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.dark.border,
   },
   avatarContainer: {
-    width: 80,
-    height: 80,
+    width: 40,
+    height: 40,
     borderRadius: 40,
     backgroundColor: Colors.dark.primary,
     alignItems: 'center',
