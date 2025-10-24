@@ -18,8 +18,11 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "edgeToEdgeEnabled": false,
+      "predictiveBackGestureEnabled": false,
+      "navigationBar": {
+        "backgroundColor": "#FFFF00"
+      }
     },
     "web": {
       "output": "static",
@@ -27,6 +30,8 @@
     },
     "plugins": [
       "expo-router",
+      "expo-navigation-bar",
+      "expo-system-ui",
       [
         "expo-splash-screen",
         {
