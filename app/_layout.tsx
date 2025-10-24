@@ -8,6 +8,19 @@ import * as SystemUI from 'expo-system-ui';
 
 import { AuthProvider } from '../contexts/AuthContext';
 import { databaseService } from '../services/database';
+import { Colors } from '../constants/theme';
+
+// Tema personalizado basado en nuestros colores
+const CustomDarkTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    background: Colors.dark.background,
+    card: Colors.dark.surface,
+    border: Colors.dark.border,
+    primary: Colors.dark.primary,
+  },
+};
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -22,11 +35,11 @@ export default function RootLayout() {
     const setupNavigationBar = async () => {
       try {
         // Probar múltiples enfoques
-        await NavigationBar.setBackgroundColorAsync("#FFFF00");
-        await NavigationBar.setButtonStyleAsync("dark");
+        await NavigationBar.setBackgroundColorAsync("#0a0a0a");
+        await NavigationBar.setButtonStyleAsync("light");
         
         // También usar SystemUI como respaldo
-        await SystemUI.setBackgroundColorAsync("#FFFF00");
+        await SystemUI.setBackgroundColorAsync("#0a0a0a");
         
         console.log("Global navigation bar configured successfully");
       } catch (error) {
@@ -34,7 +47,7 @@ export default function RootLayout() {
         
         // Fallback usando solo NavigationBar
         try {
-          await NavigationBar.setBackgroundColorAsync("#FFFF00");
+          await NavigationBar.setBackgroundColorAsync("#0a0a0a");
         } catch (fallbackError) {
           console.log("Fallback also failed:", fallbackError);
         }

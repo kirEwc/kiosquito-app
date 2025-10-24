@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,24 +11,32 @@ import {
   Keyboard,
   ScrollView,
   Modal,
-} from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
-import { databaseService, Producto, Moneda } from '../../services/database';
-import { Colors, Spacing, Typography, BorderRadius } from '../../constants/theme';
+} from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { Card } from "../../components/ui/Card";
+import { Button } from "../../components/ui/Button";
+import { databaseService, Producto, Moneda } from "../../services/database";
+import {
+  Colors,
+  Spacing,
+  Typography,
+  BorderRadius,
+} from "../../constants/theme";
 
 export default function VentasScreen() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [monedas, setMonedas] = useState<Moneda[]>([]);
-  
+
   // Estados del modal de venta
   const [modalVentaVisible, setModalVentaVisible] = useState(false);
-  const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null);
+  const [productoSeleccionado, setProductoSeleccionado] =
+    useState<Producto | null>(null);
   const [cantidad, setCantidad] = useState(1);
-  const [monedaSeleccionada, setMonedaSeleccionada] = useState<Moneda | null>(null);
+  const [monedaSeleccionada, setMonedaSeleccionada] = useState<Moneda | null>(
+    null
+  );
   const [loadingVenta, setLoadingVenta] = useState(false);
 
   useEffect(() => {
@@ -48,44 +56,44 @@ export default function VentasScreen() {
         databaseService.getProductos(),
         databaseService.getMonedas(),
       ]);
-      
-      setProductos(productosData.filter(p => p.stock > 0));
+
+      setProductos(productosData.filter((p) => p.stock > 0));
       setMonedas(monedasData);
-      
+
       // Seleccionar CUP por defecto
-      const cup = monedasData.find(m => m.codigo === 'CUP');
+      const cup = monedasData.find((m) => m.codigo === "CUP");
       if (cup) setMonedaSeleccionada(cup);
     } catch (error) {
-      console.error('Error cargando datos:', error);
-      Alert.alert('Error', 'No se pudieron cargar los datos');
+      console.error("Error cargando datos:", error);
+      Alert.alert("Error", "No se pudieron cargar los datos");
     }
   };
 
   const getFechaActual = () => {
     const fecha = new Date();
-    const opciones: Intl.DateTimeFormatOptions = { 
-      weekday: 'long', 
-      day: 'numeric', 
-      month: 'short', 
-      year: 'numeric' 
+    const opciones: Intl.DateTimeFormatOptions = {
+      weekday: "long",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
     };
-    return fecha.toLocaleDateString('es-ES', opciones);
+    return fecha.toLocaleDateString("es-ES", opciones);
   };
 
   const abrirModalVenta = () => {
     setProductoSeleccionado(null);
     setCantidad(1);
-    
+
     // Seleccionar CUP por defecto
-    const cup = monedas.find(m => m.codigo === 'CUP');
+    const cup = monedas.find((m) => m.codigo === "CUP");
     if (cup) setMonedaSeleccionada(cup);
-    
+
     setModalVentaVisible(true);
   };
 
   const ajustarCantidad = (incremento: number) => {
     if (!productoSeleccionado) return;
-    
+
     const nuevaCantidad = cantidad + incremento;
     if (nuevaCantidad >= 1 && nuevaCantidad <= productoSeleccionado.stock) {
       setCantidad(nuevaCantidad);
@@ -100,17 +108,17 @@ export default function VentasScreen() {
 
   const registrarVenta = async () => {
     if (!productoSeleccionado) {
-      Alert.alert('Error', 'Selecciona un producto');
+      Alert.alert("Error", "Selecciona un producto");
       return;
     }
 
     if (!monedaSeleccionada) {
-      Alert.alert('Error', 'Selecciona una moneda');
+      Alert.alert("Error", "Selecciona una moneda");
       return;
     }
 
     if (cantidad <= 0 || cantidad > productoSeleccionado.stock) {
-      Alert.alert('Error', 'Cantidad inválida');
+      Alert.alert("Error", "Cantidad inválida");
       return;
     }
 
@@ -127,25 +135,25 @@ export default function VentasScreen() {
         total_cup: totalCup,
       });
 
-      Alert.alert('✅ Éxito', 'Venta registrada correctamente');
-      
+      Alert.alert("✅ Éxito", "Venta registrada correctamente");
+
       // Cerrar modal y limpiar
       setModalVentaVisible(false);
       setProductoSeleccionado(null);
       setCantidad(1);
-      
+
       // Recargar productos para actualizar stock
       cargarDatos();
     } catch (error) {
-      console.error('Error registrando venta:', error);
-      Alert.alert('Error', 'No se pudo registrar la venta');
+      console.error("Error registrando venta:", error);
+      Alert.alert("Error", "No se pudo registrar la venta");
     } finally {
       setLoadingVenta(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>🧾 Registrar Venta</Text>
@@ -160,7 +168,7 @@ export default function VentasScreen() {
           <Text style={styles.welcomeText}>
             Registra las ventas de productos de forma rápida y sencilla
           </Text>
-          
+
           <Button
             title="Registrar Nueva Venta"
             onPress={abrirModalVenta}
@@ -176,7 +184,7 @@ export default function VentasScreen() {
         animationType="slide"
         presentationStyle="pageSheet"
       >
-        <SafeAreaView style={styles.modalContainer} edges={['top']}>
+        <SafeAreaView style={styles.modalContainer} edges={["top"]}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Nueva Venta</Text>
             <TouchableOpacity onPress={() => setModalVentaVisible(false)}>
@@ -186,7 +194,7 @@ export default function VentasScreen() {
 
           <KeyboardAvoidingView
             style={styles.modalKeyboardView}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
             keyboardVerticalOffset={0}
           >
             <ScrollView
@@ -203,30 +211,43 @@ export default function VentasScreen() {
                       style={styles.dropdown}
                       onPress={() => {
                         if (productos.length === 0) {
-                          Alert.alert('Sin productos', 'No hay productos disponibles para vender');
+                          Alert.alert(
+                            "Sin productos",
+                            "No hay productos disponibles para vender"
+                          );
                           return;
                         }
                         // Mostrar lista de productos
                         Alert.alert(
-                          'Seleccionar Producto',
-                          'Elige un producto:',
-                          productos.map(producto => ({
-                            text: `${producto.nombre} - $${producto.precio_cup} CUP (Stock: ${producto.stock})`,
-                            onPress: () => {
-                              setProductoSeleccionado(producto);
-                              setCantidad(1);
-                            }
-                          })).concat([{ text: 'Cancelar', onPress: () => {} }])
+                          "Seleccionar Producto",
+                          "Elige un producto:",
+                          productos
+                            .map((producto) => ({
+                              text: `${producto.nombre} - $${producto.precio_cup} CUP (Stock: ${producto.stock})`,
+                              onPress: () => {
+                                setProductoSeleccionado(producto);
+                                setCantidad(1);
+                              },
+                            }))
+                            .concat([{ text: "Cancelar", onPress: () => {} }])
                         );
                       }}
                     >
-                      <Text style={[styles.dropdownText, !productoSeleccionado && styles.dropdownPlaceholder]}>
-                        {productoSeleccionado ? 
-                          `${productoSeleccionado.nombre} - $${productoSeleccionado.precio_cup} CUP` : 
-                          'Selecciona un producto'
-                        }
+                      <Text
+                        style={[
+                          styles.dropdownText,
+                          !productoSeleccionado && styles.dropdownPlaceholder,
+                        ]}
+                      >
+                        {productoSeleccionado
+                          ? `${productoSeleccionado.nombre} - $${productoSeleccionado.precio_cup} CUP`
+                          : "Selecciona un producto"}
                       </Text>
-                      <Ionicons name="chevron-down" size={20} color={Colors.dark.icon} />
+                      <Ionicons
+                        name="chevron-down"
+                        size={20}
+                        color={Colors.dark.icon}
+                      />
                     </TouchableOpacity>
                   </View>
 
@@ -240,26 +261,34 @@ export default function VentasScreen() {
                           onPress={() => ajustarCantidad(-1)}
                           disabled={cantidad <= 1}
                         >
-                          <Ionicons 
-                            name="remove" 
-                            size={24} 
-                            color={cantidad <= 1 ? Colors.dark.border : Colors.dark.text} 
+                          <Ionicons
+                            name="remove"
+                            size={24}
+                            color={
+                              cantidad <= 1
+                                ? Colors.dark.border
+                                : Colors.dark.text
+                            }
                           />
                         </TouchableOpacity>
-                        
+
                         <View style={styles.cantidadDisplay}>
                           <Text style={styles.cantidadTexto}>{cantidad}</Text>
                         </View>
-                        
+
                         <TouchableOpacity
                           style={styles.cantidadButton}
                           onPress={() => ajustarCantidad(1)}
                           disabled={cantidad >= productoSeleccionado.stock}
                         >
-                          <Ionicons 
-                            name="add" 
-                            size={24} 
-                            color={cantidad >= productoSeleccionado.stock ? Colors.dark.border : Colors.dark.text} 
+                          <Ionicons
+                            name="add"
+                            size={24}
+                            color={
+                              cantidad >= productoSeleccionado.stock
+                                ? Colors.dark.border
+                                : Colors.dark.text
+                            }
                           />
                         </TouchableOpacity>
                       </View>
@@ -276,22 +305,27 @@ export default function VentasScreen() {
                       style={styles.dropdown}
                       onPress={() => {
                         Alert.alert(
-                          'Seleccionar Moneda',
-                          'Elige una moneda:',
-                          monedas.map(moneda => ({
-                            text: `${moneda.codigo} - ${moneda.nombre}`,
-                            onPress: () => setMonedaSeleccionada(moneda)
-                          })).concat([{ text: 'Cancelar', onPress: () => {} }])
+                          "Seleccionar Moneda",
+                          "Elige una moneda:",
+                          monedas
+                            .map((moneda) => ({
+                              text: `${moneda.codigo} - ${moneda.nombre}`,
+                              onPress: () => setMonedaSeleccionada(moneda),
+                            }))
+                            .concat([{ text: "Cancelar", onPress: () => {} }])
                         );
                       }}
                     >
                       <Text style={styles.dropdownText}>
-                        {monedaSeleccionada ? 
-                          `${monedaSeleccionada.codigo} - ${monedaSeleccionada.nombre}` : 
-                          'Selecciona una moneda'
-                        }
+                        {monedaSeleccionada
+                          ? `${monedaSeleccionada.codigo} - ${monedaSeleccionada.nombre}`
+                          : "Selecciona una moneda"}
                       </Text>
-                      <Ionicons name="chevron-down" size={20} color={Colors.dark.icon} />
+                      <Ionicons
+                        name="chevron-down"
+                        size={20}
+                        color={Colors.dark.icon}
+                      />
                     </TouchableOpacity>
                   </View>
 
@@ -302,9 +336,13 @@ export default function VentasScreen() {
                       <Text style={styles.totalAmount}>
                         {calcularTotal().toFixed(2)} {monedaSeleccionada.codigo}
                       </Text>
-                      {monedaSeleccionada.codigo !== 'CUP' && (
+                      {monedaSeleccionada.codigo !== "CUP" && (
                         <Text style={styles.totalConvertido}>
-                          ≈ ${(productoSeleccionado.precio_cup * cantidad).toFixed(2)} CUP
+                          ≈ $
+                          {(productoSeleccionado.precio_cup * cantidad).toFixed(
+                            2
+                          )}{" "}
+                          CUP
                         </Text>
                       )}
                     </Card>
@@ -347,14 +385,14 @@ const styles = StyleSheet.create({
   fecha: {
     ...Typography.caption,
     color: Colors.dark.secondary,
-    textTransform: 'capitalize',
+    textTransform: "capitalize",
   },
   content: {
     flex: 1,
     padding: Spacing.lg,
   },
   welcomeCard: {
-    alignItems: 'center',
+    alignItems: "center",
     padding: Spacing.xl,
     marginBottom: Spacing.lg,
   },
@@ -367,30 +405,30 @@ const styles = StyleSheet.create({
   welcomeText: {
     ...Typography.body,
     color: Colors.dark.secondary,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: Spacing.xl,
   },
   nuevaVentaButton: {
     minWidth: 200,
   },
   statsContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: Spacing.md,
   },
   statCard: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
     padding: Spacing.lg,
   },
   statNumber: {
     ...Typography.h1,
     color: Colors.dark.primary,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   statLabel: {
     ...Typography.caption,
     color: Colors.dark.secondary,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: Spacing.xs,
   },
   modalContainer: {
@@ -398,9 +436,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.dark.background,
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: Spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: Colors.dark.border,
@@ -424,13 +462,13 @@ const styles = StyleSheet.create({
   inputLabel: {
     ...Typography.body,
     color: Colors.dark.text,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: Spacing.sm,
   },
   dropdown: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     backgroundColor: Colors.dark.surface,
     padding: Spacing.md,
     borderRadius: BorderRadius.md,
@@ -447,9 +485,9 @@ const styles = StyleSheet.create({
     color: Colors.dark.secondary,
   },
   cantidadControl: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: Spacing.lg,
   },
   cantidadButton: {
@@ -457,31 +495,31 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     backgroundColor: Colors.dark.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
     borderColor: Colors.dark.border,
   },
   cantidadDisplay: {
     minWidth: 80,
-    alignItems: 'center',
+    alignItems: "center",
   },
   cantidadTexto: {
     ...Typography.h1,
     color: Colors.dark.text,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   helperText: {
     ...Typography.caption,
     color: Colors.dark.secondary,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: Spacing.sm,
   },
   totalCard: {
-    backgroundColor: Colors.dark.primary + '20',
+    backgroundColor: Colors.dark.primary + "20",
     borderColor: Colors.dark.primary,
     borderWidth: 2,
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: Spacing.lg,
   },
   totalLabel: {
@@ -492,7 +530,7 @@ const styles = StyleSheet.create({
   totalAmount: {
     ...Typography.h1,
     color: Colors.dark.primary,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   totalConvertido: {
     ...Typography.body,

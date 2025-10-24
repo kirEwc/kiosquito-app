@@ -21,7 +21,7 @@
       "edgeToEdgeEnabled": false,
       "predictiveBackGestureEnabled": false,
       "navigationBar": {
-        "backgroundColor": "#FFFF00"
+        "backgroundColor": "#0a0a0a"
       }
     },
     "web": {
