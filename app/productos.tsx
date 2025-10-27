@@ -188,14 +188,12 @@ export default function ProductosScreen() {
         <View style={styles.placeholder} />
       </View>
 
-      <View style={styles.actionBar}>
-        <Button
-          title="Nuevo Producto"
+        <TouchableOpacity
           onPress={() => abrirModal()}
-          leftIcon="add"
           style={styles.nuevoButton}
-        />
-      </View>
+            >
+              <Ionicons name="add" size={32} color="#fff" />
+      </TouchableOpacity>
 
       <FlatList
         data={productos}
@@ -361,7 +359,14 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.dark.border,
   },
   nuevoButton: {
-    alignSelf: 'flex-start',
+    position: 'absolute',
+    bottom: 40,
+    right: 20,
+    zIndex: 10,
+    borderRadius: 50,
+    alignSelf: 'center',
+    backgroundColor: Colors.dark.primary,
+    padding: Spacing.md,
   },
   lista: {
     padding: Spacing.lg,

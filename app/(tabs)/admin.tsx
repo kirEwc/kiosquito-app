@@ -71,9 +71,10 @@ export default function AdminScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -87,29 +88,6 @@ export default function AdminScreen() {
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <Text style={styles.title}>⚙️ Panel de Administración</Text>
-            <TouchableOpacity
-              style={styles.logoutButton}
-              onPress={() => {
-                Alert.alert(
-                  "Cerrar Sesión",
-                  "¿Estás seguro de que quieres cerrar sesión?",
-                  [
-                    { text: "Cancelar", style: "cancel" },
-                    {
-                      text: "Cerrar Sesión",
-                      style: "destructive",
-                      onPress: logout,
-                    },
-                  ]
-                );
-              }}
-            >
-              <Ionicons
-                name="log-out-outline"
-                size={24}
-                color={Colors.dark.error}
-              />
-            </TouchableOpacity>
           </View>
         </View>
 
@@ -202,14 +180,12 @@ export default function AdminScreen() {
             title="📊 Historial de Ventas"
             onPress={() => router.push("/historial-ventas")}
             style={styles.navButton}
-            leftIcon="bar-chart"
           />
 
           <Button
             title="📦 Gestionar Productos"
             onPress={() => router.push("/productos")}
             style={styles.navButton}
-            leftIcon="cube"
           />
         </View>
       </ScrollView>

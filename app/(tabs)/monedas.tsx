@@ -153,11 +153,6 @@ export default function MonedasScreen() {
     );
   };
 
-  const calcularEquivalencia = (moneda: Moneda, cantidad: number = 100) => {
-    if (moneda.codigo === 'CUP') return cantidad;
-    return (cantidad / moneda.tasa_cambio).toFixed(2);
-  };
-
   const renderMoneda = ({ item }: { item: Moneda }) => (
     <Card style={styles.monedaCard}>
       <View style={styles.monedaHeader}>
@@ -209,22 +204,27 @@ export default function MonedasScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+
+
+      <TouchableOpacity
+          onPress={() => abrirModal()}
+          style={styles.nuevoButton}
+            >
+              <Ionicons name="add" size={32} color="#fff" />
+      </TouchableOpacity>
+
+        
+      <ScrollView
+      showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1 }}
+          >
+
       <View style={styles.header}>
         <Text style={styles.title}>💰 Monedas y Tasas</Text>
-        <Text style={styles.subtitle}>
-          Gestiona las monedas y sus tasas de cambio respecto al CUP
-        </Text>
       </View>
 
-      <View style={styles.actionBar}>
-        <Button
-          title="Nueva Moneda"
-          onPress={() => abrirModal()}
-          leftIcon="add"
-          style={styles.nuevoButton}
-        />
-      </View>
+        
 
       <FlatList
         data={monedas}
@@ -309,7 +309,7 @@ export default function MonedasScreen() {
                       placeholderTextColor="#666"
                       keyboardType="numeric"
                       editable={!loading}
-                    />
+                      />
                   </View>
 
                   {/* Card de Información */}
@@ -335,6 +335,8 @@ export default function MonedasScreen() {
           </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
+
+</ScrollView>
     </SafeAreaView>
   );
 }
@@ -364,8 +366,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.dark.border,
   },
-  nuevoButton: {
-    alignSelf: 'flex-start',
+ nuevoButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 10,
+    zIndex: 10,
+    borderRadius: 50,
+    alignSelf: 'center',
+    backgroundColor: Colors.dark.primary,
+    padding: Spacing.md,
   },
   lista: {
     padding: Spacing.lg,
