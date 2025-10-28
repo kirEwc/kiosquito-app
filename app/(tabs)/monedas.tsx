@@ -215,10 +215,7 @@ export default function MonedasScreen() {
       </TouchableOpacity>
 
         
-      <ScrollView
-      showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1 }}
-          >
+      
 
       <View style={styles.header}>
         <Text style={styles.title}>💰 Monedas y Tasas</Text>
@@ -336,7 +333,6 @@ export default function MonedasScreen() {
         </SafeAreaView>
       </Modal>
 
-</ScrollView>
     </SafeAreaView>
   );
 }

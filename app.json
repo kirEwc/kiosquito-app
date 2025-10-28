@@ -22,7 +22,8 @@
       "predictiveBackGestureEnabled": false,
       "navigationBar": {
         "backgroundColor": "#0a0a0a"
-      }
+      },
+      "package": "com.kiriwc.kiosquitoapp"
     },
     "web": {
       "output": "static",
@@ -48,6 +49,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "expo-navigation-bar": {},
+      "eas": {
+        "projectId": "b2bac756-7124-4f1d-9a6d-67c69ad1743e"
+      }
     }
   }
 }

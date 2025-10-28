@@ -4,17 +4,14 @@ import {
   Text,
   StyleSheet,
   Alert,
-  TouchableOpacity,
   ScrollView,
   RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { databaseService } from "../../services/database";
-import { useAuth } from "../../contexts/AuthContext";
 import {
   Colors,
   Spacing,
@@ -23,7 +20,6 @@ import {
 } from "../../constants/theme";
 
 export default function AdminScreen() {
-  const { logout } = useAuth();
   const [resumenHoy, setResumenHoy] = useState<any>(null);
   const [resumenSemana, setResumenSemana] = useState<any>(null);
   const [resumenMes, setResumenMes] = useState<any>(null);
@@ -146,33 +142,6 @@ export default function AdminScreen() {
             </Card>
           )}
         </View>
-
-        {/* Estado de Productos */}
-        {productosInfo && (
-          <Card style={styles.productosCard}>
-            <Text style={styles.productosTitulo}>📦 Estado del Inventario</Text>
-            <View style={styles.productosRow}>
-              <View style={styles.productosItem}>
-                <Text style={styles.productosNumero}>
-                  {productosInfo.total}
-                </Text>
-                <Text style={styles.productosLabel}>Total Productos</Text>
-              </View>
-              <View style={styles.productosItem}>
-                <Text style={[styles.productosNumero, styles.stockBajo]}>
-                  {productosInfo.stockBajo}
-                </Text>
-                <Text style={styles.productosLabel}>Stock Bajo</Text>
-              </View>
-              <View style={styles.productosItem}>
-                <Text style={[styles.productosNumero, styles.sinStock]}>
-                  {productosInfo.sinStock}
-                </Text>
-                <Text style={styles.productosLabel}>Sin Stock</Text>
-              </View>
-            </View>
-          </Card>
-        )}
 
         {/* Botones de Navegación */}
         <View style={styles.navigationButtons}>
