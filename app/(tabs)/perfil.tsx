@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -6,46 +6,37 @@ import {
   ScrollView,
   Alert,
   RefreshControl,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { Button } from '../../components/ui/Button';
-import { useAuth } from '../../contexts/AuthContext';
-import { databaseService } from '../../services/database';
-import { Colors, Spacing, Typography } from '../../constants/theme';
+  Modal,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
+  TextInput,
+  TouchableWithoutFeedback,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { Button } from "../../components/ui/Button";
+import { useAuth } from "../../contexts/AuthContext";
+import { databaseService } from "../../services/database";
+import {
+  Colors,
+  Spacing,
+  Typography,
+  BorderRadius,
+} from "../../constants/theme";
 
 export default function PerfilScreen() {
   const { user, logout } = useAuth();
-  const [estadisticas, setEstadisticas] = useState<any>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
 
-  useEffect(() => {
-    cargarEstadisticas();
-  }, []);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
-  const cargarEstadisticas = async () => {
-    try {
-      const [resumenDia, resumenSemana, resumenMes] = await Promise.all([
-        databaseService.getResumenVentas('dia'),
-        databaseService.getResumenVentas('semana'),
-        databaseService.getResumenVentas('mes'),
-      ]);
-
-      const productos = await databaseService.getProductos();
-      const monedas = await databaseService.getMonedas();
-
-      setEstadisticas({
-        dia: resumenDia,
-        semana: resumenSemana,
-        mes: resumenMes,
-        totalProductos: productos.length,
-        totalMonedas: monedas.length,
-        stockBajo: productos.filter(p => p.stock <= 5).length,
-      });
-    } catch (error) {
-      console.error('Error cargando estadísticas:', error);
-    }
-  };
+  const cargarEstadisticas = async () => {};
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -55,48 +46,135 @@ export default function PerfilScreen() {
 
   const handleLogout = () => {
     Alert.alert(
-      'Cerrar Sesión',
-      '¿Estás seguro de que quieres cerrar sesión?',
+      "Cerrar Sesión",
+      "¿Estás seguro de que quieres cerrar sesión?",
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: "Cancelar", style: "cancel" },
         {
-          text: 'Cerrar Sesión',
-          style: 'destructive',
+          text: "Cerrar Sesión",
+          style: "destructive",
           onPress: async () => {
             await logout();
-            router.replace('/login');
+            router.replace("/login");
           },
         },
       ]
     );
   };
 
+  const handleOpenModal = () => {
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setModalVisible(true);
+  };
+
+  const handleCloseModal = () => {
+    Keyboard.dismiss();
+    setModalVisible(false);
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+  };
+
+  const handleSaveChanges = async () => {
+    if (!currentPassword) {
+      Alert.alert("Error", "Debes ingresar tu contraseña actual");
+      return;
+    }
+
+    if (!newPassword) {
+      Alert.alert("Error", "Debes ingresar una nueva contraseña");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      Alert.alert("Error", "Las contraseñas no coinciden");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      Alert.alert(
+        "Error",
+        "La nueva contraseña debe tener al menos 6 caracteres"
+      );
+      return;
+    }
+
+    if (!user?.id) {
+      Alert.alert("Error", "No se pudo identificar el usuario");
+      return;
+    }
+
+    try {
+      await databaseService.updateUserPassword(
+        user.id,
+        currentPassword,
+        newPassword
+      );
+
+      Alert.alert("Éxito", "Contraseña actualizada correctamente", [
+        { text: "OK", onPress: handleCloseModal },
+      ]);
+    } catch (error) {
+      console.error("Error actualizando contraseña:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "No se pudo actualizar la contraseña";
+      Alert.alert("Error", errorMessage);
+    }
+  };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={Colors.dark.primary}
-            colors={[Colors.dark.primary]}
-          />
-        }
-      >
-        {/* Header del perfil */}
-        <View style={styles.header}>
-          <View style={styles.avatarContainer}>
-            <Text style={styles.avatarText}>👤</Text>
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <View style={styles.contentWrapper}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={Colors.dark.primary}
+              colors={[Colors.dark.primary]}
+            />
+          }
+        >
+          <View style={styles.header}>
+            <View style={styles.avatarContainer}>
+              <Text style={styles.avatarText}>👤</Text>
+            </View>
+            <Text style={styles.userName}>{user?.username}</Text>
+            <Text style={styles.userRole}>Administrador del Sistema</Text>
           </View>
-          <Text style={styles.userName}>{user?.username}</Text>
-          <Text style={styles.userRole}>Administrador del Sistema</Text>
-        </View>
 
-        {/* cambiar de contraseña */}
+          <View style={styles.optionsContainer}>
+            <TouchableOpacity
+              style={styles.optionItem}
+              onPress={handleOpenModal}
+            >
+              <View style={styles.optionIcon}>
+                <Ionicons
+                  name="settings-outline"
+                  size={24}
+                  color={Colors.dark.primary}
+                />
+              </View>
+              <View style={styles.optionContent}>
+                <Text style={styles.optionTitle}>Cambiar Datos</Text>
+                <Text style={styles.optionSubtitle}>
+                  Modificar usuario y contraseña
+                </Text>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={Colors.dark.secondary}
+              />
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
 
-        {/* Botón de cerrar sesión */}
         <View style={styles.logoutContainer}>
           <Button
             title="Cerrar Sesión"
@@ -105,7 +183,97 @@ export default function PerfilScreen() {
             style={styles.logoutButton}
           />
         </View>
-      </ScrollView>
+      </View>
+
+      {/* Modal para cambiar contraseña */}
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={handleCloseModal}
+      >
+        <SafeAreaView style={styles.modalContainer} edges={["top"]}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Cambiar Contraseña</Text>
+            <TouchableOpacity onPress={handleCloseModal}>
+              <Ionicons name="close" size={24} color={Colors.dark.text} />
+            </TouchableOpacity>
+          </View>
+
+          <KeyboardAvoidingView
+            style={styles.modalKeyboardView}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+          >
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+              <View style={styles.modalContent}>
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>Contraseña Actual</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={currentPassword}
+                    onChangeText={setCurrentPassword}
+                    placeholder="Ingresa tu contraseña actual"
+                    placeholderTextColor={Colors.dark.secondary}
+                    secureTextEntry
+                    autoFocus={true}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    returnKeyType="next"
+                  />
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>Nueva Contraseña</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={newPassword}
+                    onChangeText={setNewPassword}
+                    placeholder="Ingresa la nueva contraseña"
+                    placeholderTextColor={Colors.dark.secondary}
+                    secureTextEntry
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    returnKeyType="next"
+                  />
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>
+                    Confirmar Nueva Contraseña
+                  </Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    placeholder="Confirma la nueva contraseña"
+                    placeholderTextColor={Colors.dark.secondary}
+                    secureTextEntry
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    returnKeyType="done"
+                    onSubmitEditing={handleSaveChanges}
+                  />
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </KeyboardAvoidingView>
+
+          <View style={styles.modalFooter}>
+            <Button
+              title="Cancelar"
+              onPress={handleCloseModal}
+              variant="danger"
+              style={styles.modalButton}
+            />
+            <Button
+              title="Guardar Cambios"
+              onPress={handleSaveChanges}
+              style={styles.modalButton}
+            />
+          </View>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -115,8 +283,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.dark.background,
   },
+  contentWrapper: {
+    flex: 1,
+  },
   header: {
-    alignItems: 'center',
+    alignItems: "center",
     padding: Spacing.xl,
     backgroundColor: Colors.dark.surface,
     borderBottomWidth: 1,
@@ -127,8 +298,8 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 40,
     backgroundColor: Colors.dark.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: Spacing.md,
     shadowColor: Colors.dark.primary,
     shadowOffset: { width: 0, height: 4 },
@@ -148,114 +319,104 @@ const styles = StyleSheet.create({
     ...Typography.body,
     color: Colors.dark.secondary,
   },
-  statsCard: {
+  optionsContainer: {
     margin: Spacing.lg,
+    backgroundColor: Colors.dark.surface,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
   },
-  sectionTitle: {
-    ...Typography.h3,
-    color: Colors.dark.text,
-    marginBottom: Spacing.md,
+  optionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: Spacing.lg,
   },
-  statsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  statsRow: {
-    alignItems: 'center',
-  },
-  statItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  statItemLarge: {
-    alignItems: 'center',
-    paddingVertical: Spacing.sm,
-  },
-  statNumber: {
-    ...Typography.h2,
-    color: Colors.dark.primary,
-    fontWeight: 'bold',
-  },
-  statNumberLarge: {
-    ...Typography.h1,
-    color: Colors.dark.primary,
-    fontWeight: 'bold',
-  },
-  statLabel: {
-    ...Typography.caption,
-    color: Colors.dark.secondary,
-    textAlign: 'center',
-    marginTop: Spacing.xs,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.dark.border,
-    marginVertical: Spacing.md,
-  },
-  menuCard: {
-    marginHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.dark.border,
-  },
-  menuItemLast: {
-    borderBottomWidth: 0,
-  },
-  menuIcon: {
+  optionIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: Colors.dark.background,
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: Spacing.md,
   },
-  menuContent: {
+  optionContent: {
     flex: 1,
   },
-  menuTitle: {
+  optionTitle: {
     ...Typography.body,
     color: Colors.dark.text,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: Spacing.xs,
   },
-  menuSubtitle: {
+  optionSubtitle: {
     ...Typography.caption,
     color: Colors.dark.secondary,
   },
-  infoCard: {
-    marginHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.dark.border,
-  },
-  infoRowLast: {
-    borderBottomWidth: 0,
-  },
-  infoLabel: {
-    ...Typography.body,
-    color: Colors.dark.secondary,
-  },
-  infoValue: {
-    ...Typography.body,
-    color: Colors.dark.text,
-    fontWeight: '600',
-  },
   logoutContainer: {
     padding: Spacing.lg,
-    paddingBottom: Spacing.xxl,
+    paddingBottom: Spacing.xl,
+    backgroundColor: Colors.dark.background,
+    borderTopWidth: 1,
+    borderTopColor: Colors.dark.border,
   },
   logoutButton: {
     marginBottom: Spacing.md,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: Colors.dark.background,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: Spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.dark.border,
+  },
+  modalTitle: {
+    ...Typography.h2,
+    color: Colors.dark.text,
+  },
+  modalKeyboardView: {
+    flex: 1,
+  },
+  modalContent: {
+    flex: 1,
+    padding: Spacing.lg,
+    justifyContent: "flex-start",
+  },
+  inputContainer: {
+    marginBottom: Spacing.lg,
+  },
+  inputLabel: {
+    ...Typography.body,
+    color: Colors.dark.text,
+    fontWeight: "600",
+    marginBottom: Spacing.sm,
+  },
+  textInput: {
+    height: 50,
+    backgroundColor: Colors.dark.surface,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.md,
+    fontSize: 16,
+    color: Colors.dark.text,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+  },
+  modalFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    padding: Spacing.lg,
+    paddingBottom: Platform.OS === "ios" ? Spacing.xl : Spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: Colors.dark.border,
+    gap: Spacing.md,
+    backgroundColor: Colors.dark.background,
+  },
+  modalButton: {
+    flex: 1,
   },
 });

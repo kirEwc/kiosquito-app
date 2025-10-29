@@ -109,10 +109,6 @@ export default function LoginScreen() {
                   {loading ? 'Iniciando...' : 'Iniciar Sesión'}
                 </Text>
               </TouchableOpacity>
-
-              <Text style={styles.hint}>
-                Usuario por defecto: admin / admin123
-              </Text>
             </View>
           </View>
         </TouchableWithoutFeedback>

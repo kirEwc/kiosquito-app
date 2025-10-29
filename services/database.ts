@@ -227,6 +227,39 @@ class DatabaseService {
     return user;
   }
 
+  async updateUserPassword(userId: number, currentPassword: string, newPassword: string): Promise<boolean> {
+    if (!this.db) throw new Error("Base de datos no inicializada");
+
+    // Verificar que la contraseña actual es correcta
+    const user = await this.db.getFirstAsync(
+      "SELECT id FROM usuarios WHERE id = ? AND password = ?",
+      [userId, currentPassword]
+    );
+
+    if (!user) {
+      throw new Error("La contraseña actual es incorrecta");
+    }
+
+    // Actualizar la contraseña
+    await this.db.runAsync(
+      "UPDATE usuarios SET password = ? WHERE id = ?",
+      [newPassword, userId]
+    );
+
+    return true;
+  }
+
+  async getUserById(userId: number): Promise<Usuario | null> {
+    if (!this.db) return null;
+
+    const user = (await this.db.getFirstAsync(
+      "SELECT * FROM usuarios WHERE id = ?",
+      [userId]
+    )) as Usuario | null;
+
+    return user;
+  }
+
   // Métodos para productos
   async getProductos(): Promise<Producto[]> {
     if (!this.db) return [];
