@@ -46,7 +46,7 @@ class DatabaseService {
       await this.createTables();
       await this.insertDefaultData();
     } catch (error) {
-      console.error("Error inicializando base de datos:", error);
+      // Silently handle database initialization errors
     }
   }
 

@@ -23,7 +23,6 @@ export class AuthService {
       
       return user;
     } catch (error) {
-      console.error('Error en login:', error);
       return null;
     }
   }
@@ -33,7 +32,7 @@ export class AuthService {
       await AsyncStorage.removeItem(AUTH_KEY);
       await AsyncStorage.removeItem(REMEMBER_KEY);
     } catch (error) {
-      console.error('Error en logout:', error);
+      // Silently handle logout errors
     }
   }
 
@@ -42,7 +41,6 @@ export class AuthService {
       const userStr = await AsyncStorage.getItem(AUTH_KEY);
       return userStr ? JSON.parse(userStr) : null;
     } catch (error) {
-      console.error('Error obteniendo usuario actual:', error);
       return null;
     }
   }
@@ -52,7 +50,6 @@ export class AuthService {
       const rememberStr = await AsyncStorage.getItem(REMEMBER_KEY);
       return rememberStr ? JSON.parse(rememberStr) : null;
     } catch (error) {
-      console.error('Error obteniendo usuario recordado:', error);
       return null;
     }
   }
@@ -67,9 +64,8 @@ export class AuthService {
     try {
       await AsyncStorage.removeItem(AUTH_KEY);
       await AsyncStorage.removeItem(REMEMBER_KEY);
-      console.log('All auth data cleared');
     } catch (error) {
-      console.error('Error clearing auth data:', error);
+      // Silently handle clear auth data errors
     }
   }
 }

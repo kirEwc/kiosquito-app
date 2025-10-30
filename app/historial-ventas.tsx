@@ -31,7 +31,7 @@ export default function HistorialVentasScreen() {
       const ventasData = await databaseService.getVentas();
       setVentas(ventasData);
     } catch (error) {
-      console.error('Error cargando ventas:', error);
+      // Silently handle error
     } finally {
       if (isRefreshing) {
         setRefreshing(false);

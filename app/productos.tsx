@@ -46,7 +46,6 @@ export default function ProductosScreen() {
       const productosData = await databaseService.getProductos();
       setProductos(productosData);
     } catch (error) {
-      console.error('Error cargando productos:', error);
       showAlert({
         title: 'Error',
         message: 'No se pudieron cargar los productos',
@@ -138,7 +137,6 @@ export default function ProductosScreen() {
       setModalVisible(false);
       cargarProductos();
     } catch (error) {
-      console.error('Error guardando producto:', error);
       showAlert({
         title: 'Error',
         message: 'No se pudo guardar el producto',
@@ -169,7 +167,6 @@ export default function ProductosScreen() {
               });
               cargarProductos();
             } catch (error) {
-              console.error('Error eliminando producto:', error);
               showAlert({
                 title: 'Error',
                 message: 'No se pudo eliminar el producto',

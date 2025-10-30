@@ -50,7 +50,6 @@ export default function VentasScreen() {
       const cup = monedasData.find((m) => m.codigo === "CUP");
       if (cup) setMonedaSeleccionada(cup);
     } catch (error) {
-      console.error("Error cargando datos:", error);
       showAlert({
         title: "Error",
         message: "No se pudieron cargar los datos",
@@ -162,7 +161,6 @@ export default function VentasScreen() {
       // Recargar productos para actualizar stock
       cargarDatos();
     } catch (error) {
-      console.error("Error registrando venta:", error);
       showAlert({
         title: "Error",
         message: "No se pudo registrar la venta",

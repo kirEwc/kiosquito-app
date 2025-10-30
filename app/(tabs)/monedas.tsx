@@ -41,7 +41,6 @@ export default function MonedasScreen() {
       const monedasData = await databaseService.getAllMonedas();
       setMonedas(monedasData);
     } catch (error) {
-      console.error('Error cargando monedas:', error);
       Alert.alert('Error', 'No se pudieron cargar las monedas');
     }
   };
@@ -111,8 +110,6 @@ export default function MonedasScreen() {
       setModalVisible(false);
       cargarMonedas();
     } catch (error: any) {
-      console.error('Error guardando moneda:', error);
-      
       // Detectar error de código duplicado
       if (error?.message?.includes('UNIQUE constraint failed: monedas.codigo')) {
         Alert.alert('Error', `Ya existe una moneda con el código "${formData.codigo.toUpperCase()}"`);
@@ -144,7 +141,6 @@ export default function MonedasScreen() {
               Alert.alert('Éxito', 'Moneda eliminada correctamente');
               cargarMonedas();
             } catch (error) {
-              console.error('Error eliminando moneda:', error);
               Alert.alert('Error', 'No se pudo eliminar la moneda');
             }
           },

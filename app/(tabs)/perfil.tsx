@@ -139,7 +139,6 @@ export default function PerfilScreen() {
         buttons: [{ text: "OK", onPress: handleCloseModal }],
       });
     } catch (error) {
-      console.error("Error actualizando contraseña:", error);
       const errorMessage =
         error instanceof Error
           ? error.message
@@ -170,7 +169,6 @@ export default function PerfilScreen() {
             <View style={styles.avatarContainer}>
               <Text style={styles.avatarText}>👤</Text>
             </View>
-            <Text style={styles.userName}>{user?.username}</Text>
             <Text style={styles.userRole}>Administrador del Sistema</Text>
           </View>
 
@@ -320,8 +318,8 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.dark.border,
   },
   avatarContainer: {
-    width: 40,
-    height: 40,
+    width: 60,
+    height: 60,
     borderRadius: 40,
     backgroundColor: Colors.dark.primary,
     alignItems: "center",

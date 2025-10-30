@@ -58,7 +58,6 @@ export default function AdminScreen() {
         sinStock,
       });
     } catch (error) {
-      console.error("Error cargando datos:", error);
       showAlert({
         title: "Error",
         message: "No se pudieron cargar los datos",

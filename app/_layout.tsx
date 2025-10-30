@@ -41,16 +41,12 @@ export default function RootLayout() {
         
         // También usar SystemUI como respaldo
         await SystemUI.setBackgroundColorAsync("#0a0a0a");
-        
-        console.log("Global navigation bar configured successfully");
       } catch (error) {
-        console.log("Error configuring global navigation bar:", error);
-        
         // Fallback usando solo NavigationBar
         try {
           await NavigationBar.setBackgroundColorAsync("#0a0a0a");
         } catch (fallbackError) {
-          console.log("Fallback also failed:", fallbackError);
+          // Silently fail if navigation bar setup doesn't work
         }
       }
     };

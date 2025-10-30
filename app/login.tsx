@@ -55,7 +55,6 @@ export default function LoginScreen() {
         message: 'Ocurrió un error al iniciar sesión',
         type: 'error',
       });
-      console.error('Error en login:', error);
     } finally {
       setLoading(false);
     }

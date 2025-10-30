@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const currentUser = await AuthService.getCurrentUser();
       setUser(currentUser);
     } catch (error) {
-      console.error('Error verificando estado de autenticación:', error);
+      // Silently handle auth check errors
     } finally {
       setIsLoading(false);
     }
@@ -39,7 +39,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       return false;
     } catch (error) {
-      console.error('Error en login:', error);
       return false;
     }
   };
@@ -49,7 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await AuthService.logout();
       setUser(null);
     } catch (error) {
-      console.error('Error en logout:', error);
+      // Silently handle logout errors
     }
   };
 
