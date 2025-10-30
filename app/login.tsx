@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Keyboard,
@@ -16,18 +15,24 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '../contexts/AuthContext';
+import { useAlert } from '../hooks/useAlert';
 
 export default function LoginScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
+  const { showAlert } = useAlert();
 
   const handleLogin = async () => {
     Keyboard.dismiss();
     
     if (!username.trim() || !password.trim()) {
-      Alert.alert('Error', 'Por favor ingresa usuario y contraseña');
+      showAlert({
+        title: 'Error',
+        message: 'Por favor ingresa usuario y contraseña',
+        type: 'error',
+      });
       return;
     }
 
@@ -38,10 +43,18 @@ export default function LoginScreen() {
       if (success) {
         router.replace('/(tabs)');
       } else {
-        Alert.alert('Error', 'Usuario o contraseña incorrectos');
+        showAlert({
+          title: 'Error',
+          message: 'Usuario o contraseña incorrectos',
+          type: 'error',
+        });
       }
     } catch (error) {
-      Alert.alert('Error', 'Ocurrió un error al iniciar sesión');
+      showAlert({
+        title: 'Error',
+        message: 'Ocurrió un error al iniciar sesión',
+        type: 'error',
+      });
       console.error('Error en login:', error);
     } finally {
       setLoading(false);

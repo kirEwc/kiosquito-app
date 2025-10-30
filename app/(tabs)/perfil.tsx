@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Alert,
   RefreshControl,
   Modal,
   TouchableOpacity,
@@ -19,6 +18,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Button } from "../../components/ui/Button";
 import { useAuth } from "../../contexts/AuthContext";
+import { useAlert } from "../../hooks/useAlert";
 import { databaseService } from "../../services/database";
 import {
   Colors,
@@ -29,6 +29,7 @@ import {
 
 export default function PerfilScreen() {
   const { user, logout } = useAuth();
+  const { showAlert } = useAlert();
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -45,10 +46,11 @@ export default function PerfilScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      "Cerrar Sesión",
-      "¿Estás seguro de que quieres cerrar sesión?",
-      [
+    showAlert({
+      title: "Cerrar Sesión",
+      message: "¿Estás seguro de que quieres cerrar sesión?",
+      type: "warning",
+      buttons: [
         { text: "Cancelar", style: "cancel" },
         {
           text: "Cerrar Sesión",
@@ -58,8 +60,8 @@ export default function PerfilScreen() {
             router.replace("/login");
           },
         },
-      ]
-    );
+      ],
+    });
   };
 
   const handleOpenModal = () => {
@@ -79,30 +81,47 @@ export default function PerfilScreen() {
 
   const handleSaveChanges = async () => {
     if (!currentPassword) {
-      Alert.alert("Error", "Debes ingresar tu contraseña actual");
+      showAlert({
+        title: "Error",
+        message: "Debes ingresar tu contraseña actual",
+        type: "error",
+      });
       return;
     }
 
     if (!newPassword) {
-      Alert.alert("Error", "Debes ingresar una nueva contraseña");
+      showAlert({
+        title: "Error",
+        message: "Debes ingresar una nueva contraseña",
+        type: "error",
+      });
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      Alert.alert("Error", "Las contraseñas no coinciden");
+      showAlert({
+        title: "Error",
+        message: "Las contraseñas no coinciden",
+        type: "error",
+      });
       return;
     }
 
     if (newPassword.length < 6) {
-      Alert.alert(
-        "Error",
-        "La nueva contraseña debe tener al menos 6 caracteres"
-      );
+      showAlert({
+        title: "Error",
+        message: "La nueva contraseña debe tener al menos 6 caracteres",
+        type: "error",
+      });
       return;
     }
 
     if (!user?.id) {
-      Alert.alert("Error", "No se pudo identificar el usuario");
+      showAlert({
+        title: "Error",
+        message: "No se pudo identificar el usuario",
+        type: "error",
+      });
       return;
     }
 
@@ -113,16 +132,23 @@ export default function PerfilScreen() {
         newPassword
       );
 
-      Alert.alert("Éxito", "Contraseña actualizada correctamente", [
-        { text: "OK", onPress: handleCloseModal },
-      ]);
+      showAlert({
+        title: "Éxito",
+        message: "Contraseña actualizada correctamente",
+        type: "success",
+        buttons: [{ text: "OK", onPress: handleCloseModal }],
+      });
     } catch (error) {
       console.error("Error actualizando contraseña:", error);
       const errorMessage =
         error instanceof Error
           ? error.message
           : "No se pudo actualizar la contraseña";
-      Alert.alert("Error", errorMessage);
+      showAlert({
+        title: "Error",
+        message: errorMessage,
+        type: "error",
+      });
     }
   };
 

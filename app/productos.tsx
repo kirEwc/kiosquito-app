@@ -19,10 +19,12 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { useAlert } from '../hooks/useAlert';
 import { databaseService, Producto } from '../services/database';
 import { Colors, Spacing, Typography, BorderRadius } from '../constants/theme';
 
 export default function ProductosScreen() {
+  const { showAlert } = useAlert();
   const [productos, setProductos] = useState<Producto[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [productoEditando, setProductoEditando] = useState<Producto | null>(null);
@@ -45,7 +47,11 @@ export default function ProductosScreen() {
       setProductos(productosData);
     } catch (error) {
       console.error('Error cargando productos:', error);
-      Alert.alert('Error', 'No se pudieron cargar los productos');
+      showAlert({
+        title: 'Error',
+        message: 'No se pudieron cargar los productos',
+        type: 'error',
+      });
     }
   };
 
@@ -74,7 +80,11 @@ export default function ProductosScreen() {
 
   const guardarProducto = async () => {
     if (!formData.nombre.trim() || !formData.precio_cup || !formData.stock) {
-      Alert.alert('Error', 'Por favor completa los campos obligatorios');
+      showAlert({
+        title: 'Error',
+        message: 'Por favor completa los campos obligatorios',
+        type: 'error',
+      });
       return;
     }
 
@@ -82,12 +92,20 @@ export default function ProductosScreen() {
     const stock = parseInt(formData.stock);
 
     if (isNaN(precio) || precio <= 0) {
-      Alert.alert('Error', 'El precio debe ser un número válido mayor a 0');
+      showAlert({
+        title: 'Error',
+        message: 'El precio debe ser un número válido mayor a 0',
+        type: 'error',
+      });
       return;
     }
 
     if (isNaN(stock) || stock < 0) {
-      Alert.alert('Error', 'El stock debe ser un número válido mayor o igual a 0');
+      showAlert({
+        title: 'Error',
+        message: 'El stock debe ser un número válido mayor o igual a 0',
+        type: 'error',
+      });
       return;
     }
 
@@ -103,27 +121,40 @@ export default function ProductosScreen() {
 
       if (productoEditando) {
         await databaseService.updateProducto(productoEditando.id!, productoData);
-        Alert.alert('Éxito', 'Producto actualizado correctamente');
+        showAlert({
+          title: 'Éxito',
+          message: 'Producto actualizado correctamente',
+          type: 'success',
+        });
       } else {
         await databaseService.createProducto(productoData);
-        Alert.alert('Éxito', 'Producto creado correctamente');
+        showAlert({
+          title: 'Éxito',
+          message: 'Producto creado correctamente',
+          type: 'success',
+        });
       }
 
       setModalVisible(false);
       cargarProductos();
     } catch (error) {
       console.error('Error guardando producto:', error);
-      Alert.alert('Error', 'No se pudo guardar el producto');
+      showAlert({
+        title: 'Error',
+        message: 'No se pudo guardar el producto',
+        type: 'error',
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const eliminarProducto = (producto: Producto) => {
-    Alert.alert(
-      'Confirmar eliminación',
-      `¿Estás seguro de que quieres eliminar "${producto.nombre}"?`,
-      [
+    showAlert({
+      title: 'Confirmar eliminación',
+      message: `¿Estás seguro de que quieres eliminar "${producto.nombre}"?`,
+      type: 'warning',
+      buttons: [
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Eliminar',
@@ -131,16 +162,24 @@ export default function ProductosScreen() {
           onPress: async () => {
             try {
               await databaseService.deleteProducto(producto.id!);
-              Alert.alert('Éxito', 'Producto eliminado correctamente');
+              showAlert({
+                title: 'Éxito',
+                message: 'Producto eliminado correctamente',
+                type: 'success',
+              });
               cargarProductos();
             } catch (error) {
               console.error('Error eliminando producto:', error);
-              Alert.alert('Error', 'No se pudo eliminar el producto');
+              showAlert({
+                title: 'Error',
+                message: 'No se pudo eliminar el producto',
+                type: 'error',
+              });
             }
           },
         },
-      ]
-    );
+      ],
+    });
   };
 
   const renderProducto = ({ item }: { item: Producto }) => (

@@ -7,6 +7,7 @@ import * as NavigationBar from 'expo-navigation-bar';
 import * as SystemUI from 'expo-system-ui';
 
 import { AuthProvider } from '../contexts/AuthContext';
+import { AlertProvider } from '../hooks/useAlert';
 import { databaseService } from '../services/database';
 import { Colors } from '../constants/theme';
 
@@ -59,15 +60,17 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <ThemeProvider value={DarkTheme}>
-        <Stack>
-          <Stack.Screen name="login" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="historial-ventas" options={{ headerShown: false }} />
-          <Stack.Screen name="productos" options={{ headerShown: false }} />
-        </Stack>
-        <StatusBar style="light" />
-      </ThemeProvider>
+      <AlertProvider>
+        <ThemeProvider value={DarkTheme}>
+          <Stack>
+            <Stack.Screen name="login" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="historial-ventas" options={{ headerShown: false }} />
+            <Stack.Screen name="productos" options={{ headerShown: false }} />
+          </Stack>
+          <StatusBar style="light" />
+        </ThemeProvider>
+      </AlertProvider>
     </AuthProvider>
   );
 }

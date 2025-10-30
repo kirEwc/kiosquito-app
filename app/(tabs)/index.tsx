@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Alert,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
@@ -17,15 +16,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
+import { Select } from "../../components/ui/Select";
+import { useAlert } from "../../hooks/useAlert";
 import { databaseService, Producto, Moneda } from "../../services/database";
-import {
-  Colors,
-  Spacing,
-  Typography,
-  BorderRadius,
-} from "../../constants/theme";
+import { Colors, Spacing, Typography } from "../../constants/theme";
 
 export default function VentasScreen() {
+  const { showAlert } = useAlert();
   const [productos, setProductos] = useState<Producto[]>([]);
   const [monedas, setMonedas] = useState<Moneda[]>([]);
 
@@ -39,18 +36,7 @@ export default function VentasScreen() {
   );
   const [loadingVenta, setLoadingVenta] = useState(false);
 
-  useEffect(() => {
-    cargarDatos();
-  }, []);
-
-  // Recargar datos cuando la pantalla se enfoca
-  useFocusEffect(
-    React.useCallback(() => {
-      cargarDatos();
-    }, [])
-  );
-
-  const cargarDatos = async () => {
+  const cargarDatos = React.useCallback(async () => {
     try {
       const [productosData, monedasData] = await Promise.all([
         databaseService.getProductos(),
@@ -65,9 +51,24 @@ export default function VentasScreen() {
       if (cup) setMonedaSeleccionada(cup);
     } catch (error) {
       console.error("Error cargando datos:", error);
-      Alert.alert("Error", "No se pudieron cargar los datos");
+      showAlert({
+        title: "Error",
+        message: "No se pudieron cargar los datos",
+        type: "error",
+      });
     }
-  };
+  }, [showAlert]);
+
+  useEffect(() => {
+    cargarDatos();
+  }, [cargarDatos]);
+
+  // Recargar datos cuando la pantalla se enfoca
+  useFocusEffect(
+    React.useCallback(() => {
+      cargarDatos();
+    }, [cargarDatos])
+  );
 
   const getFechaActual = () => {
     const fecha = new Date();
@@ -108,17 +109,29 @@ export default function VentasScreen() {
 
   const registrarVenta = async () => {
     if (!productoSeleccionado) {
-      Alert.alert("Error", "Selecciona un producto");
+      showAlert({
+        title: "Error",
+        message: "Selecciona un producto",
+        type: "error",
+      });
       return;
     }
 
     if (!monedaSeleccionada) {
-      Alert.alert("Error", "Selecciona una moneda");
+      showAlert({
+        title: "Error",
+        message: "Selecciona una moneda",
+        type: "error",
+      });
       return;
     }
 
     if (cantidad <= 0 || cantidad > productoSeleccionado.stock) {
-      Alert.alert("Error", "Cantidad inválida");
+      showAlert({
+        title: "Error",
+        message: "Cantidad inválida",
+        type: "error",
+      });
       return;
     }
 
@@ -135,7 +148,11 @@ export default function VentasScreen() {
         total_cup: totalCup,
       });
 
-      Alert.alert("✅ Éxito", "Venta registrada correctamente");
+      showAlert({
+        title: "Éxito",
+        message: "Venta registrada correctamente",
+        type: "success",
+      });
 
       // Cerrar modal y limpiar
       setModalVentaVisible(false);
@@ -146,7 +163,11 @@ export default function VentasScreen() {
       cargarDatos();
     } catch (error) {
       console.error("Error registrando venta:", error);
-      Alert.alert("Error", "No se pudo registrar la venta");
+      showAlert({
+        title: "Error",
+        message: "No se pudo registrar la venta",
+        type: "error",
+      });
     } finally {
       setLoadingVenta(false);
     }
@@ -205,51 +226,32 @@ export default function VentasScreen() {
               <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                 <View>
                   {/* Selector de Producto */}
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Producto *</Text>
-                    <TouchableOpacity
-                      style={styles.dropdown}
-                      onPress={() => {
-                        if (productos.length === 0) {
-                          Alert.alert(
-                            "Sin productos",
-                            "No hay productos disponibles para vender"
-                          );
-                          return;
-                        }
-                        // Mostrar lista de productos
-                        Alert.alert(
-                          "Seleccionar Producto",
-                          "Elige un producto:",
-                          productos
-                            .map((producto) => ({
-                              text: `${producto.nombre} - $${producto.precio_cup} CUP (Stock: ${producto.stock})`,
-                              onPress: () => {
-                                setProductoSeleccionado(producto);
-                                setCantidad(1);
-                              },
-                            }))
-                            .concat([{ text: "Cancelar", onPress: () => {} }])
-                        );
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.dropdownText,
-                          !productoSeleccionado && styles.dropdownPlaceholder,
-                        ]}
-                      >
-                        {productoSeleccionado
-                          ? `${productoSeleccionado.nombre} - $${productoSeleccionado.precio_cup} CUP`
-                          : "Selecciona un producto"}
-                      </Text>
-                      <Ionicons
-                        name="chevron-down"
-                        size={20}
-                        color={Colors.dark.icon}
-                      />
-                    </TouchableOpacity>
-                  </View>
+                  <Select
+                    label="Producto *"
+                    placeholder="Selecciona un producto"
+                    options={productos.map((producto) => ({
+                      label: producto.nombre,
+                      value: producto.id,
+                      subtitle: `$${producto.precio_cup} CUP - Stock: ${producto.stock}`,
+                    }))}
+                    value={productoSeleccionado?.id}
+                    onSelect={(option) => {
+                      const producto = productos.find(
+                        (p) => p.id === option.value
+                      );
+                      if (producto) {
+                        setProductoSeleccionado(producto);
+                        setCantidad(1);
+                      }
+                    }}
+                    disabled={productos.length === 0}
+                  />
+
+                  {productos.length === 0 && (
+                    <Text style={styles.warningText}>
+                      No hay productos disponibles para vender
+                    </Text>
+                  )}
 
                   {/* Selector de Cantidad */}
                   {productoSeleccionado && (
@@ -299,35 +301,22 @@ export default function VentasScreen() {
                   )}
 
                   {/* Selector de Moneda */}
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Moneda *</Text>
-                    <TouchableOpacity
-                      style={styles.dropdown}
-                      onPress={() => {
-                        Alert.alert(
-                          "Seleccionar Moneda",
-                          "Elige una moneda:",
-                          monedas
-                            .map((moneda) => ({
-                              text: `${moneda.codigo} - ${moneda.nombre}`,
-                              onPress: () => setMonedaSeleccionada(moneda),
-                            }))
-                            .concat([{ text: "Cancelar", onPress: () => {} }])
-                        );
-                      }}
-                    >
-                      <Text style={styles.dropdownText}>
-                        {monedaSeleccionada
-                          ? `${monedaSeleccionada.codigo} - ${monedaSeleccionada.nombre}`
-                          : "Selecciona una moneda"}
-                      </Text>
-                      <Ionicons
-                        name="chevron-down"
-                        size={20}
-                        color={Colors.dark.icon}
-                      />
-                    </TouchableOpacity>
-                  </View>
+                  <Select
+                    label="Moneda *"
+                    placeholder="Selecciona una moneda"
+                    options={monedas.map((moneda) => ({
+                      label: `${moneda.codigo} - ${moneda.nombre}`,
+                      value: moneda.id,
+                      subtitle: `Tasa: ${moneda.tasa_cambio}`,
+                    }))}
+                    value={monedaSeleccionada?.id}
+                    onSelect={(option) => {
+                      const moneda = monedas.find((m) => m.id === option.value);
+                      if (moneda) {
+                        setMonedaSeleccionada(moneda);
+                      }
+                    }}
+                  />
 
                   {/* Total */}
                   {productoSeleccionado && monedaSeleccionada && (
@@ -465,24 +454,12 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: Spacing.sm,
   },
-  dropdown: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: Colors.dark.surface,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.dark.border,
-    minHeight: 50,
-  },
-  dropdownText: {
-    ...Typography.body,
-    color: Colors.dark.text,
-    flex: 1,
-  },
-  dropdownPlaceholder: {
-    color: Colors.dark.secondary,
+  warningText: {
+    ...Typography.caption,
+    color: Colors.dark.error || "#ef4444",
+    textAlign: "center",
+    marginTop: Spacing.xs,
+    fontStyle: "italic",
   },
   cantidadControl: {
     flexDirection: "row",

@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Alert,
   ScrollView,
   RefreshControl,
 } from "react-native";
@@ -11,6 +10,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
+import { useAlert } from "../../hooks/useAlert";
 import { databaseService } from "../../services/database";
 import {
   Colors,
@@ -20,6 +20,7 @@ import {
 } from "../../constants/theme";
 
 export default function AdminScreen() {
+  const { showAlert } = useAlert();
   const [resumenHoy, setResumenHoy] = useState<any>(null);
   const [resumenSemana, setResumenSemana] = useState<any>(null);
   const [resumenMes, setResumenMes] = useState<any>(null);
@@ -58,7 +59,11 @@ export default function AdminScreen() {
       });
     } catch (error) {
       console.error("Error cargando datos:", error);
-      Alert.alert("Error", "No se pudieron cargar los datos");
+      showAlert({
+        title: "Error",
+        message: "No se pudieron cargar los datos",
+        type: "error",
+      });
     } finally {
       if (isRefreshing) {
         setRefreshing(false);
