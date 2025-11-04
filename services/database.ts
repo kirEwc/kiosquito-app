@@ -117,19 +117,7 @@ class DatabaseService {
       );
     }
 
-    // Moneda CUP por defecto
-    const cupExists = await this.db.getFirstAsync(
-      "SELECT id FROM monedas WHERE codigo = ?",
-      ["CUP"]
-    );
-    if (!cupExists) {
-      await this.db.runAsync(
-        "INSERT INTO monedas (codigo, nombre, tasa_cambio, activa) VALUES (?, ?, ?, ?)",
-        ["CUP", "Peso Cubano", 1.0, 1]
-      );
-    }
-
-    // Monedas adicionales de ejemplo
+    // Moneda USD por defecto (base currency)
     const usdExists = await this.db.getFirstAsync(
       "SELECT id FROM monedas WHERE codigo = ?",
       ["USD"]
@@ -137,10 +125,23 @@ class DatabaseService {
     if (!usdExists) {
       await this.db.runAsync(
         "INSERT INTO monedas (codigo, nombre, tasa_cambio, activa) VALUES (?, ?, ?, ?)",
-        ["USD", "Dólar Estadounidense", 120.0, 1]
+        ["USD", "Dólar estadounidense", 1.0, 1]
       );
     }
 
+    // Moneda CUP como segunda moneda
+    const cupExists = await this.db.getFirstAsync(
+      "SELECT id FROM monedas WHERE codigo = ?",
+      ["CUP"]
+    );
+    if (!cupExists) {
+      await this.db.runAsync(
+        "INSERT INTO monedas (codigo, nombre, tasa_cambio, activa) VALUES (?, ?, ?, ?)",
+        ["CUP", "Peso Cubano", 120.0, 1]
+      );
+    }
+
+    // Moneda MLC adicional
     const mlcExists = await this.db.getFirstAsync(
       "SELECT id FROM monedas WHERE codigo = ?",
       ["MLC"]
@@ -322,7 +323,7 @@ class DatabaseService {
     if (!this.db) return [];
 
     const monedas = (await this.db.getAllAsync(
-      "SELECT * FROM monedas ORDER BY CASE WHEN codigo = 'CUP' THEN 0 ELSE 1 END, codigo"
+      "SELECT * FROM monedas ORDER BY CASE WHEN codigo = 'USD' THEN 0 WHEN codigo = 'CUP' THEN 1 ELSE 2 END, codigo"
     )) as Moneda[];
     return monedas;
   }

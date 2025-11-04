@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Alert,
   Modal,
   FlatList,
   TouchableOpacity,
@@ -13,15 +12,20 @@ import {
   Keyboard,
   TextInput,
   ScrollView,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { Select } from '../../components/ui/Select';
+import { useAlert } from '../../hooks/useAlert';
 import { databaseService, Moneda } from '../../services/database';
+import { MONEDAS } from '../../constants/monedas';
 import { Colors, Spacing, Typography, BorderRadius } from '../../constants/theme';
 
 export default function MonedasScreen() {
+  const { showAlert } = useAlert();
   const [monedas, setMonedas] = useState<Moneda[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [monedaEditando, setMonedaEditando] = useState<Moneda | null>(null);
@@ -30,20 +34,33 @@ export default function MonedasScreen() {
     nombre: '',
     tasa_cambio: '',
   });
+  const [selectedCurrency, setSelectedCurrency] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    cargarMonedas();
-  }, []);
-
-  const cargarMonedas = async () => {
+  const cargarMonedas = React.useCallback(async (isRefreshing = false) => {
+    if (isRefreshing) {
+      setRefreshing(true);
+    }
     try {
       const monedasData = await databaseService.getAllMonedas();
       setMonedas(monedasData);
-    } catch (error) {
-      Alert.alert('Error', 'No se pudieron cargar las monedas');
+    } catch {
+      showAlert({
+        title: 'Error',
+        message: 'No se pudieron cargar las monedas',
+        type: 'error',
+      });
+    } finally {
+      if (isRefreshing) {
+        setRefreshing(false);
+      }
     }
-  };
+  }, [showAlert]);
+
+  useEffect(() => {
+    cargarMonedas();
+  }, [cargarMonedas]);
 
   const abrirModal = (moneda?: Moneda) => {
     if (moneda) {
@@ -53,6 +70,19 @@ export default function MonedasScreen() {
         nombre: moneda.nombre,
         tasa_cambio: moneda.tasa_cambio.toString(),
       });
+      
+      // Find the selected currency in the MONEDAS array for editing
+      const matchingCurrency = MONEDAS.find(m => 
+        m.code === moneda.codigo && m.name === moneda.nombre
+      );
+      
+      if (matchingCurrency) {
+        const currencyKey = `${matchingCurrency.code}-${matchingCurrency.name}`;
+        setSelectedCurrency(currencyKey);
+      } else {
+        // If currency is not in MONEDAS list (custom currency), set to null
+        setSelectedCurrency(null);
+      }
     } else {
       setMonedaEditando(null);
       setFormData({
@@ -60,33 +90,134 @@ export default function MonedasScreen() {
         nombre: '',
         tasa_cambio: '',
       });
+      setSelectedCurrency(null);
     }
     setModalVisible(true);
   };
 
   const guardarMoneda = async () => {
-    if (!formData.codigo.trim() || !formData.nombre.trim() || !formData.tasa_cambio) {
-      Alert.alert('Error', 'Por favor completa todos los campos');
+    // For new currencies, validate selection
+    if (!monedaEditando && !selectedCurrency) {
+      showAlert({
+        title: 'Error',
+        message: 'Por favor selecciona una moneda',
+        type: 'error',
+      });
+      return;
+    }
+
+    // For editing, validate that required fields are filled
+    if (monedaEditando && !formData.tasa_cambio) {
+      showAlert({
+        title: 'Error',
+        message: 'Por favor ingresa la tasa de cambio',
+        type: 'error',
+      });
+      return;
+    }
+
+    // For editing non-USD currencies, validate currency selection
+    if (monedaEditando && monedaEditando.codigo !== 'USD' && !selectedCurrency) {
+      showAlert({
+        title: 'Error',
+        message: 'Por favor selecciona una moneda',
+        type: 'error',
+      });
+      return;
+    }
+
+    if (!formData.tasa_cambio) {
+      showAlert({
+        title: 'Error',
+        message: 'Por favor ingresa la tasa de cambio',
+        type: 'error',
+      });
       return;
     }
 
     const tasa = parseFloat(formData.tasa_cambio);
     if (isNaN(tasa) || tasa <= 0) {
-      Alert.alert('Error', 'La tasa de cambio debe ser un número válido mayor a 0');
+      showAlert({
+        title: 'Error',
+        message: 'La tasa de cambio debe ser un número válido mayor a 0',
+        type: 'error',
+      });
       return;
     }
 
-    // Validar que el código no sea CUP si es una nueva moneda
-    if (!monedaEditando && formData.codigo.toUpperCase() === 'CUP') {
-      Alert.alert('Error', 'No se puede crear otra moneda con código CUP');
+    // Get currency data from selection or form
+    let currencyCode: string, currencyName: string;
+    
+    if (!monedaEditando && selectedCurrency) {
+      // Creating new currency
+      const selectedCurrencyData = MONEDAS.find(m => `${m.code}-${m.name}` === selectedCurrency);
+      if (!selectedCurrencyData) {
+        showAlert({
+          title: 'Error',
+          message: 'Moneda seleccionada no válida',
+          type: 'error',
+        });
+        return;
+      }
+      currencyCode = selectedCurrencyData.code;
+      currencyName = selectedCurrencyData.name;
+    } else if (monedaEditando && monedaEditando.codigo === 'USD') {
+      // Editing USD - use existing data
+      currencyCode = monedaEditando.codigo;
+      currencyName = monedaEditando.nombre;
+    } else if (monedaEditando && selectedCurrency) {
+      // Editing other currency with new selection
+      const selectedCurrencyData = MONEDAS.find(m => `${m.code}-${m.name}` === selectedCurrency);
+      if (!selectedCurrencyData) {
+        showAlert({
+          title: 'Error',
+          message: 'Moneda seleccionada no válida',
+          type: 'error',
+        });
+        return;
+      }
+      currencyCode = selectedCurrencyData.code;
+      currencyName = selectedCurrencyData.name;
+    } else {
+      // Fallback to form data
+      currencyCode = formData.codigo.trim();
+      currencyName = formData.nombre.trim();
+    }
+
+    // Validar que el código no sea USD si es una nueva moneda
+    if (!monedaEditando && currencyCode.toUpperCase() === 'USD') {
+      showAlert({
+        title: 'Error',
+        message: 'No se puede crear otra moneda con código USD',
+        type: 'error',
+      });
       return;
     }
 
-    // Validar que el código no exista ya (solo para nuevas monedas)
+    // Validar que el código no exista ya
     if (!monedaEditando) {
-      const monedaExistente = monedas.find(m => m.codigo.toUpperCase() === formData.codigo.toUpperCase().trim());
+      // For new currencies
+      const monedaExistente = monedas.find(m => m.codigo.toUpperCase() === currencyCode.toUpperCase());
       if (monedaExistente) {
-        Alert.alert('Error', `Ya existe una moneda con el código "${formData.codigo.toUpperCase()}"`);
+        showAlert({
+          title: 'Error',
+          message: `Ya existe una moneda con el código "${currencyCode.toUpperCase()}"`,
+          type: 'error',
+        });
+        return;
+      }
+    } else if (monedaEditando.codigo !== currencyCode) {
+      // For edited currencies that changed code
+      const monedaExistente = monedas.find(m => 
+        m.codigo.toUpperCase() === currencyCode.toUpperCase() && 
+        m.id !== monedaEditando.id
+      );
+      if (monedaExistente) {
+        showAlert({
+          title: 'Error',
+          message: `Ya existe una moneda con el código "${currencyCode.toUpperCase()}"`,
+          type: 'error',
+        });
         return;
       }
     }
@@ -94,17 +225,25 @@ export default function MonedasScreen() {
     setLoading(true);
     try {
       const monedaData = {
-        codigo: formData.codigo.toUpperCase().trim(),
-        nombre: formData.nombre.trim(),
+        codigo: currencyCode.toUpperCase(),
+        nombre: currencyName,
         tasa_cambio: tasa,
       };
 
       if (monedaEditando) {
         await databaseService.updateMoneda(monedaEditando.id!, monedaData);
-        Alert.alert('Éxito', 'Moneda actualizada correctamente');
+        showAlert({
+          title: 'Éxito',
+          message: 'Moneda actualizada correctamente',
+          type: 'success',
+        });
       } else {
         await databaseService.createMoneda(monedaData);
-        Alert.alert('Éxito', 'Moneda creada correctamente');
+        showAlert({
+          title: 'Éxito',
+          message: 'Moneda creada correctamente',
+          type: 'success',
+        });
       }
 
       setModalVisible(false);
@@ -112,9 +251,17 @@ export default function MonedasScreen() {
     } catch (error: any) {
       // Detectar error de código duplicado
       if (error?.message?.includes('UNIQUE constraint failed: monedas.codigo')) {
-        Alert.alert('Error', `Ya existe una moneda con el código "${formData.codigo.toUpperCase()}"`);
+        showAlert({
+          title: 'Error',
+          message: `Ya existe una moneda con el código "${currencyCode.toUpperCase()}"`,
+          type: 'error',
+        });
       } else {
-        Alert.alert('Error', 'No se pudo guardar la moneda. Verifica que todos los datos sean correctos.');
+        showAlert({
+          title: 'Error',
+          message: 'No se pudo guardar la moneda. Verifica que todos los datos sean correctos.',
+          type: 'error',
+        });
       }
     } finally {
       setLoading(false);
@@ -122,15 +269,20 @@ export default function MonedasScreen() {
   };
 
   const eliminarMoneda = (moneda: Moneda) => {
-    if (moneda.codigo === 'CUP') {
-      Alert.alert('Error', 'No se puede eliminar la moneda CUP');
+    if (moneda.codigo === 'USD') {
+      showAlert({
+        title: 'Error',
+        message: 'No se puede eliminar la moneda USD (moneda base)',
+        type: 'error',
+      });
       return;
     }
 
-    Alert.alert(
-      'Confirmar eliminación',
-      `¿Estás seguro de que quieres eliminar "${moneda.codigo} - ${moneda.nombre}"?`,
-      [
+    showAlert({
+      title: 'Confirmar eliminación',
+      message: `¿Estás seguro de que quieres eliminar "${moneda.codigo} - ${moneda.nombre}"?`,
+      type: 'warning',
+      buttons: [
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Eliminar',
@@ -138,15 +290,23 @@ export default function MonedasScreen() {
           onPress: async () => {
             try {
               await databaseService.deleteMoneda(moneda.id!);
-              Alert.alert('Éxito', 'Moneda eliminada correctamente');
+              showAlert({
+                title: 'Éxito',
+                message: 'Moneda eliminada correctamente',
+                type: 'success',
+              });
               cargarMonedas();
-            } catch (error) {
-              Alert.alert('Error', 'No se pudo eliminar la moneda');
+            } catch {
+              showAlert({
+                title: 'Error',
+                message: 'No se pudo eliminar la moneda',
+                type: 'error',
+              });
             }
           },
         },
-      ]
-    );
+      ],
+    });
   };
 
   const renderMoneda = ({ item }: { item: Moneda }) => (
@@ -155,7 +315,7 @@ export default function MonedasScreen() {
         <View style={styles.monedaInfo}>
           <View style={styles.monedaTitulo}>
             <Text style={styles.monedaCodigo}>{item.codigo}</Text>
-            {item.codigo === 'CUP' && (
+            {item.codigo === 'USD' && (
               <View style={styles.principalBadge}>
                 <Text style={styles.principalText}>Principal</Text>
               </View>
@@ -173,7 +333,7 @@ export default function MonedasScreen() {
             <Ionicons name="pencil" size={20} color={Colors.dark.primary} />
           </TouchableOpacity>
           
-          {item.codigo !== 'CUP' && (
+          {item.codigo !== 'USD' && (
             <TouchableOpacity
               style={[styles.accionButton, styles.deleteButton]}
               onPress={() => eliminarMoneda(item)}
@@ -185,13 +345,13 @@ export default function MonedasScreen() {
       </View>
 
       {/* Equivalencias */}
-       {item.codigo !== 'CUP' && (
+       {item.codigo !== 'USD' && (
       <View style={styles.equivalencias}>
         <Text style={styles.equivalenciasTitulo}>Equivalencias:</Text>
         
         <View style={styles.equivalenciaRow}>
           <Text style={styles.equivalenciaText}>
-            1 {item.codigo} = {item.tasa_cambio} CUP
+            1 USD = {item.tasa_cambio} {item.codigo}
           </Text>
         </View>
       </View>
@@ -225,6 +385,14 @@ export default function MonedasScreen() {
         keyExtractor={(item) => item.id!.toString()}
         contentContainerStyle={styles.lista}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => cargarMonedas(true)}
+            tintColor={Colors.dark.primary}
+            colors={[Colors.dark.primary]}
+          />
+        }
       />
 
       {/* Modal de Moneda - ARREGLADO */}
@@ -255,45 +423,131 @@ export default function MonedasScreen() {
             >
               <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                 <View>
-                  {/* Código de Moneda */}
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Código de Moneda *</Text>
-                    <TextInput
-                      style={[
-                        styles.input,
-                        !monedaEditando && monedas.some(m => m.codigo.toUpperCase() === formData.codigo.toUpperCase().trim()) && formData.codigo.trim() !== '' && styles.inputError
-                      ]}
-                      value={formData.codigo}
-                      onChangeText={(text) => setFormData({ ...formData, codigo: text.toUpperCase() })}
-                      placeholder="USD, EUR, MLC, etc."
-                      placeholderTextColor="#666"
-                      maxLength={5}
-                      autoCapitalize="characters"
-                      editable={!monedaEditando || monedaEditando.codigo !== 'CUP'}
-                    />
-                    {!monedaEditando && monedas.some(m => m.codigo.toUpperCase() === formData.codigo.toUpperCase().trim()) && formData.codigo.trim() !== '' && (
-                      <Text style={styles.errorText}>
-                        ⚠️ Ya existe una moneda con este código
-                      </Text>
-                    )}
-                  </View>
+                  {/* Selector de Moneda (solo para nuevas monedas) */}
+                  {!monedaEditando && (
+                    <>
+                      {MONEDAS.filter(currency => 
+                        !monedas.some(m => m.codigo.toUpperCase() === currency.code.toUpperCase())
+                      ).length > 0 ? (
+                        <Select
+                          label="Seleccionar Moneda *"
+                          placeholder="Elige una moneda de la lista"
+                          options={MONEDAS
+                            .filter(currency => 
+                              // Filter out currencies that already exist in the database
+                              !monedas.some(m => m.codigo.toUpperCase() === currency.code.toUpperCase())
+                            )
+                            .map(currency => ({
+                              label: `${currency.code} - ${currency.name}`,
+                              value: `${currency.code}-${currency.name}`,
+                              subtitle: currency.code,
+                            }))}
+                          value={selectedCurrency}
+                          onSelect={(option) => {
+                            setSelectedCurrency(option.value);
+                            const selectedCurrencyData = MONEDAS.find(m => `${m.code}-${m.name}` === option.value);
+                            if (selectedCurrencyData) {
+                              setFormData({
+                                ...formData,
+                                codigo: selectedCurrencyData.code,
+                                nombre: selectedCurrencyData.name,
+                              });
+                            }
+                          }}
+                        />
+                      ) : (
+                        <Card style={styles.warningCard}>
+                          <Text style={styles.warningTitle}>⚠️ Sin monedas disponibles</Text>
+                          <Text style={styles.warningText}>
+                            Todas las monedas disponibles ya han sido agregadas al sistema.
+                          </Text>
+                        </Card>
+                      )}
+                    </>
+                  )}
 
-                  {/* Nombre */}
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Nombre *</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={formData.nombre}
-                      onChangeText={(text) => setFormData({ ...formData, nombre: text })}
-                      placeholder="Dólar Estadounidense, Euro, etc."
-                      placeholderTextColor="#666"
-                      editable={!loading}
-                    />
-                  </View>
+                  {/* Selector de Moneda (para edición) */}
+                  {monedaEditando && monedaEditando.codigo !== 'USD' && (
+                    <>
+                      <Select
+                        label="Cambiar Moneda"
+                        placeholder="Selecciona una nueva moneda"
+                        options={MONEDAS
+                          .filter(currency => 
+                            // Include current currency and currencies not in database
+                            currency.code === monedaEditando.codigo ||
+                            !monedas.some(m => m.codigo.toUpperCase() === currency.code.toUpperCase())
+                          )
+                          .map(currency => ({
+                            label: `${currency.code} - ${currency.name}`,
+                            value: `${currency.code}-${currency.name}`,
+                            subtitle: currency.code,
+                          }))}
+                        value={selectedCurrency}
+                        onSelect={(option) => {
+                          setSelectedCurrency(option.value);
+                          const selectedCurrencyData = MONEDAS.find(m => `${m.code}-${m.name}` === option.value);
+                          if (selectedCurrencyData) {
+                            setFormData({
+                              ...formData,
+                              codigo: selectedCurrencyData.code,
+                              nombre: selectedCurrencyData.name,
+                            });
+                          }
+                        }}
+                      />
+                      
+                      {/* Show current currency info if not in MONEDAS list */}
+                      {!selectedCurrency && (
+                        <Card style={styles.infoCard}>
+                          <Text style={styles.infoTitulo}>📋 Moneda Actual</Text>
+                          <Text style={styles.infoTexto}>
+                            <Text style={{ fontWeight: '600' }}>{monedaEditando.codigo}</Text> - {monedaEditando.nombre}
+                          </Text>
+                          <Text style={styles.infoTexto}>
+                            Esta moneda no está en la lista predefinida. Selecciona una nueva moneda para cambiarla.
+                          </Text>
+                        </Card>
+                      )}
+                    </>
+                  )}
+
+                  {/* Campos de solo lectura para USD */}
+                  {monedaEditando && monedaEditando.codigo === 'USD' && (
+                    <>
+                      <View style={styles.inputContainer}>
+                        <Text style={styles.inputLabel}>Código de Moneda</Text>
+                        <TextInput
+                          style={[styles.input, styles.inputDisabled]}
+                          value={formData.codigo}
+                          editable={false}
+                          placeholder="Código de moneda"
+                          placeholderTextColor="#666"
+                        />
+                        <Text style={styles.helperText}>
+                          ℹ️ El código USD no se puede cambiar (moneda base)
+                        </Text>
+                      </View>
+
+                      <View style={styles.inputContainer}>
+                        <Text style={styles.inputLabel}>Nombre</Text>
+                        <TextInput
+                          style={[styles.input, styles.inputDisabled]}
+                          value={formData.nombre}
+                          editable={false}
+                          placeholder="Nombre de la moneda"
+                          placeholderTextColor="#666"
+                        />
+                        <Text style={styles.helperText}>
+                          ℹ️ El nombre USD no se puede cambiar (moneda base)
+                        </Text>
+                      </View>
+                    </>
+                  )}
 
                   {/* Tasa de Cambio */}
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Tasa de Cambio (respecto al CUP) *</Text>
+                    <Text style={styles.inputLabel}>Tasa de Cambio (respecto al USD) *</Text>
                     <TextInput
                       style={styles.input}
                       value={formData.tasa_cambio}
@@ -305,22 +559,18 @@ export default function MonedasScreen() {
                       />
                   </View>
 
-                  {/* Card de Información */}
-                  <Card style={styles.infoCard}>
-                    <Text style={styles.infoTitulo}>ℹ️ Información</Text>
-                    <Text style={styles.infoTexto}>
-                      La tasa de cambio indica cuántos CUP equivalen a 1 unidad de esta moneda.
-                    </Text>
-                    <Text style={styles.infoTexto}>
-                      Ejemplo: Si 1 USD = 120 CUP, entonces la tasa es 120.
-                    </Text>
-                  </Card>
 
                   <Button
                     title={monedaEditando ? 'Actualizar' : 'Crear'}
                     onPress={guardarMoneda}
                     loading={loading}
                     style={styles.guardarButton}
+                    disabled={
+                      !monedaEditando && 
+                      MONEDAS.filter(currency => 
+                        !monedas.some(m => m.codigo.toUpperCase() === currency.code.toUpperCase())
+                      ).length === 0
+                    }
                   />
                 </View>
               </TouchableWithoutFeedback>
@@ -490,6 +740,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.dark.border,
   },
+  inputDisabled: {
+    backgroundColor: Colors.dark.background,
+    color: Colors.dark.secondary,
+    opacity: 0.7,
+  },
+  helperText: {
+    ...Typography.caption,
+    color: Colors.dark.secondary,
+    marginTop: Spacing.xs,
+    fontStyle: 'italic',
+  },
   inputError: {
     borderColor: Colors.dark.error,
     borderWidth: 2,
@@ -517,5 +778,21 @@ const styles = StyleSheet.create({
   guardarButton: {
     marginTop: Spacing.md,
     marginBottom: Spacing.xl,
+  },
+  warningCard: {
+    backgroundColor: Colors.dark.warning + '20' || '#f59e0b20',
+    borderColor: Colors.dark.warning || '#f59e0b',
+    borderWidth: 1,
+    marginBottom: Spacing.lg,
+  },
+  warningTitle: {
+    ...Typography.body,
+    color: Colors.dark.warning || '#f59e0b',
+    fontWeight: '600',
+    marginBottom: Spacing.sm,
+  },
+  warningText: {
+    ...Typography.caption,
+    color: Colors.dark.secondary,
   },
 });

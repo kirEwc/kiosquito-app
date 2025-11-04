@@ -46,9 +46,9 @@ export default function VentasScreen() {
       setProductos(productosData.filter((p) => p.stock > 0));
       setMonedas(monedasData);
 
-      // Seleccionar CUP por defecto
-      const cup = monedasData.find((m) => m.codigo === "CUP");
-      if (cup) setMonedaSeleccionada(cup);
+      // Seleccionar USD por defecto
+      const usd = monedasData.find((m) => m.codigo === "USD");
+      if (usd) setMonedaSeleccionada(usd);
     } catch (error) {
       showAlert({
         title: "Error",
@@ -84,9 +84,9 @@ export default function VentasScreen() {
     setProductoSeleccionado(null);
     setCantidad(1);
 
-    // Seleccionar CUP por defecto
-    const cup = monedas.find((m) => m.codigo === "CUP");
-    if (cup) setMonedaSeleccionada(cup);
+    // Seleccionar USD por defecto
+    const usd = monedas.find((m) => m.codigo === "USD");
+    if (usd) setMonedaSeleccionada(usd);
 
     setModalVentaVisible(true);
   };
@@ -102,8 +102,8 @@ export default function VentasScreen() {
 
   const calcularTotal = () => {
     if (!productoSeleccionado || !monedaSeleccionada) return 0;
-    const totalCup = productoSeleccionado.precio_cup * cantidad;
-    return totalCup / monedaSeleccionada.tasa_cambio;
+    const totalUsd = productoSeleccionado.precio_cup * cantidad; // precio_cup now represents USD price
+    return totalUsd * monedaSeleccionada.tasa_cambio;
   };
 
   const registrarVenta = async () => {
