@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  Alert,
   Modal,
   FlatList,
   TouchableOpacity,
@@ -19,13 +18,15 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { Select } from '../components/ui/Select';
 import { useAlert } from '../hooks/useAlert';
-import { databaseService, Producto } from '../services/database';
+import { databaseService, Producto, Categoria } from '../services/database';
 import { Colors, Spacing, Typography, BorderRadius } from '../constants/theme';
 
 export default function ProductosScreen() {
   const { showAlert } = useAlert();
   const [productos, setProductos] = useState<Producto[]>([]);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [productoEditando, setProductoEditando] = useState<Producto | null>(null);
   const [formData, setFormData] = useState({
@@ -35,24 +36,29 @@ export default function ProductosScreen() {
     descripcion: '',
     categoria: '',
   });
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    cargarProductos();
-  }, []);
-
-  const cargarProductos = async () => {
+  const cargarDatos = useCallback(async () => {
     try {
-      const productosData = await databaseService.getProductos();
+      const [productosData, categoriasData] = await Promise.all([
+        databaseService.getProductos(),
+        databaseService.getCategorias(),
+      ]);
       setProductos(productosData);
-    } catch (error) {
+      setCategorias(categoriasData);
+    } catch {
       showAlert({
         title: 'Error',
-        message: 'No se pudieron cargar los productos',
+        message: 'No se pudieron cargar los datos',
         type: 'error',
       });
     }
-  };
+  }, [showAlert]);
+
+  useEffect(() => {
+    cargarDatos();
+  }, [cargarDatos]);
 
   const abrirModal = (producto?: Producto) => {
     if (producto) {
@@ -64,6 +70,13 @@ export default function ProductosScreen() {
         descripcion: producto.descripcion || '',
         categoria: producto.categoria || '',
       });
+      // Set selected category for editing
+      if (producto.categoria) {
+        const categoria = categorias.find(c => c.nombre === producto.categoria);
+        setSelectedCategory(categoria ? categoria.id!.toString() : null);
+      } else {
+        setSelectedCategory(null);
+      }
     } else {
       setProductoEditando(null);
       setFormData({
@@ -73,6 +86,7 @@ export default function ProductosScreen() {
         descripcion: '',
         categoria: '',
       });
+      setSelectedCategory(null);
     }
     setModalVisible(true);
   };
@@ -135,8 +149,8 @@ export default function ProductosScreen() {
       }
 
       setModalVisible(false);
-      cargarProductos();
-    } catch (error) {
+      cargarDatos();
+    } catch {
       showAlert({
         title: 'Error',
         message: 'No se pudo guardar el producto',
@@ -165,8 +179,8 @@ export default function ProductosScreen() {
                 message: 'Producto eliminado correctamente',
                 type: 'success',
               });
-              cargarProductos();
-            } catch (error) {
+              cargarDatos();
+            } catch {
               showAlert({
                 title: 'Error',
                 message: 'No se pudo eliminar el producto',
@@ -187,7 +201,9 @@ export default function ProductosScreen() {
           <Text style={styles.productoPrecio}>${item.precio_cup} CUP</Text>
           <Text style={styles.productoStock}>Stock: {item.stock}</Text>
           {item.categoria && (
-            <Text style={styles.productoCategoria}>{item.categoria}</Text>
+            <View style={styles.categoriaTag}>
+              <Text style={styles.categoriaText}>{item.categoria}</Text>
+            </View>
           )}
         </View>
         <View style={styles.productoAcciones}>
@@ -315,19 +331,29 @@ export default function ProductosScreen() {
                   </View>
 
                   {/* Categoría */}
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Categoría</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={formData.categoria}
-                      onChangeText={(text) =>
-                        setFormData({ ...formData, categoria: text })
+                  <Select
+                    label="Categoría"
+                    placeholder="Selecciona una categoría"
+                    options={categorias.map((categoria) => ({
+                      label: categoria.nombre,
+                      value: categoria.id!.toString(),
+                    }))}
+                    value={selectedCategory}
+                    onSelect={(option) => {
+                      setSelectedCategory(option.value);
+                      const categoria = categorias.find(c => c.id!.toString() === option.value);
+                      if (categoria) {
+                        setFormData({ ...formData, categoria: categoria.nombre });
                       }
-                      placeholder="Ej: Bebidas, Snacks, etc."
-                      placeholderTextColor="#666"
-                      editable={!loading}
-                    />
-                  </View>
+                    }}
+                    disabled={loading}
+                  />
+                  
+                  {categorias.length === 0 && (
+                    <Text style={styles.warningText}>
+                      ⚠️ No hay categorías disponibles. Ve a Perfil → Gestionar Categorías para crear algunas.
+                    </Text>
+                  )}
 
                   {/* Descripción */}
                   <View style={styles.inputContainer}>
@@ -434,14 +460,18 @@ const styles = StyleSheet.create({
     color: Colors.dark.secondary,
     marginBottom: Spacing.xs,
   },
-  productoCategoria: {
-    ...Typography.small,
-    color: Colors.dark.primary,
-    backgroundColor: Colors.dark.surfaceVariant,
+  categoriaTag: {
+    backgroundColor: Colors.dark.primary + '20',
+    borderRadius: BorderRadius.full,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.sm,
     alignSelf: 'flex-start',
+    marginTop: Spacing.xs,
+  },
+  categoriaText: {
+    ...Typography.small,
+    color: Colors.dark.primary,
+    fontWeight: '600',
   },
   productoDescripcion: {
     ...Typography.caption,
@@ -508,5 +538,12 @@ const styles = StyleSheet.create({
   guardarButton: {
     marginTop: Spacing.md,
     marginBottom: Spacing.xl,
+  },
+  warningText: {
+    ...Typography.caption,
+    color: Colors.dark.warning || '#f59e0b',
+    textAlign: 'center',
+    marginTop: Spacing.xs,
+    fontStyle: 'italic',
   },
 });

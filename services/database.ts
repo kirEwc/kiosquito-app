@@ -25,6 +25,13 @@ export interface Moneda {
   activa?: boolean; // Opcional, por defecto true
 }
 
+export interface Categoria {
+  id?: number;
+  nombre: string;
+  descripcion?: string;
+  fecha_creacion?: string;
+}
+
 export interface Venta {
   id?: number;
   producto_id: number;
@@ -83,6 +90,16 @@ class DatabaseService {
         nombre TEXT NOT NULL,
         tasa_cambio REAL NOT NULL DEFAULT 1.0,
         activa BOOLEAN DEFAULT 1
+      );
+    `);
+
+    // Tabla categorías
+    await this.db.execAsync(`
+      CREATE TABLE IF NOT EXISTS categorias (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT UNIQUE NOT NULL,
+        descripcion TEXT,
+        fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
@@ -153,11 +170,43 @@ class DatabaseService {
       );
     }
 
+    // Insertar categorías por defecto
+    await this.insertDefaultCategories();
+
     // No insertar productos de ejemplo automáticamente
     // Los productos deben ser creados manualmente por el usuario
     
     // Limpiar productos de ejemplo si existen (solo una vez)
     await this.cleanExampleProducts();
+  }
+
+  private async insertDefaultCategories() {
+    if (!this.db) return;
+
+    const defaultCategories = [
+      { nombre: 'Snacks', descripcion: 'Aperitivos y botanas' },
+      { nombre: 'Bebidas', descripcion: 'Refrescos, jugos y bebidas' },
+      { nombre: 'Dulces', descripcion: 'Caramelos, chocolates y golosinas' },
+      { nombre: 'Lácteos', descripcion: 'Leche, yogurt y productos lácteos' },
+      { nombre: 'Panadería', descripcion: 'Pan, galletas y productos horneados' },
+      { nombre: 'Higiene', descripcion: 'Productos de cuidado personal' },
+      { nombre: 'Limpieza', descripcion: 'Productos de limpieza del hogar' },
+      { nombre: 'Otros', descripcion: 'Productos varios' },
+    ];
+
+    for (const categoria of defaultCategories) {
+      const exists = await this.db.getFirstAsync(
+        "SELECT id FROM categorias WHERE nombre = ?",
+        [categoria.nombre]
+      );
+      
+      if (!exists) {
+        await this.db.runAsync(
+          "INSERT INTO categorias (nombre, descripcion) VALUES (?, ?)",
+          [categoria.nombre, categoria.descripcion]
+        );
+      }
+    }
   }
 
   private async cleanExampleProducts() {
@@ -463,6 +512,59 @@ class DatabaseService {
     `);
 
     return resumen;
+  }
+
+  // Métodos para categorías
+  async getCategorias(): Promise<Categoria[]> {
+    if (!this.db) return [];
+
+    const categorias = (await this.db.getAllAsync(
+      "SELECT * FROM categorias ORDER BY nombre"
+    )) as Categoria[];
+    return categorias;
+  }
+
+  async createCategoria(categoria: Omit<Categoria, "id">): Promise<number> {
+    if (!this.db) throw new Error("Base de datos no inicializada");
+
+    const result = await this.db.runAsync(
+      "INSERT INTO categorias (nombre, descripcion) VALUES (?, ?)",
+      [categoria.nombre, categoria.descripcion || ""]
+    );
+
+    return result.lastInsertRowId;
+  }
+
+  async updateCategoria(id: number, categoria: Partial<Categoria>): Promise<void> {
+    if (!this.db) throw new Error("Base de datos no inicializada");
+
+    const fields = Object.keys(categoria).filter((key) => key !== "id");
+    const values = fields.map((key) => {
+      const value = categoria[key as keyof Categoria];
+      return value !== undefined ? value : null;
+    });
+    const setClause = fields.map((field) => `${field} = ?`).join(", ");
+
+    await this.db.runAsync(`UPDATE categorias SET ${setClause} WHERE id = ?`, [
+      ...values,
+      id,
+    ]);
+  }
+
+  async deleteCategoria(id: number): Promise<void> {
+    if (!this.db) throw new Error("Base de datos no inicializada");
+    
+    // Check if category is being used by products
+    const productCount = await this.db.getFirstAsync(
+      "SELECT COUNT(*) as count FROM productos WHERE categoria = (SELECT nombre FROM categorias WHERE id = ?)",
+      [id]
+    ) as { count: number };
+
+    if (productCount.count > 0) {
+      throw new Error("No se puede eliminar la categoría porque está siendo utilizada por productos");
+    }
+
+    await this.db.runAsync("DELETE FROM categorias WHERE id = ?", [id]);
   }
 }
 

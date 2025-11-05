@@ -196,6 +196,54 @@ export default function PerfilScreen() {
                 color={Colors.dark.secondary}
               />
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.optionItem}
+              onPress={() => router.push('/productos')}
+            >
+              <View style={styles.optionIcon}>
+                <Ionicons
+                  name="cube-outline"
+                  size={24}
+                  color={Colors.dark.primary}
+                />
+              </View>
+              <View style={styles.optionContent}>
+                <Text style={styles.optionTitle}>Gestionar Productos</Text>
+                <Text style={styles.optionSubtitle}>
+                  Crear, editar y eliminar productos
+                </Text>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={Colors.dark.secondary}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.optionItem}
+              onPress={() => router.push('/categorias')}
+            >
+              <View style={styles.optionIcon}>
+                <Ionicons
+                  name="pricetags-outline"
+                  size={24}
+                  color={Colors.dark.primary}
+                />
+              </View>
+              <View style={styles.optionContent}>
+                <Text style={styles.optionTitle}>Gestionar Categorías</Text>
+                <Text style={styles.optionSubtitle}>
+                  Crear y editar etiquetas para productos
+                </Text>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={Colors.dark.secondary}
+              />
+            </TouchableOpacity>
           </View>
         </ScrollView>
 
